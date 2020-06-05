@@ -24,29 +24,30 @@ np.random.seed(args.seed)
 # tokenizer
 tokenizer = MODELS[args.pretrained_model][1].from_pretrained(args.pretrained_model)
 token_style = MODELS[args.pretrained_model][3]
+ar = args.augment_rate
 
 # Datasets
 if args.language == 'english':
-    train_set = Dataset(os.path.join(args.data_path, 'train2012'), tokenizer, args.sequence_length, token_style)
-    val_set = Dataset(os.path.join(args.data_path, 'dev2012'), tokenizer, args.sequence_length, token_style)
-    test_set_ref = Dataset(os.path.join(args.data_path, 'test2011'), tokenizer, args.sequence_length, token_style)
-    test_set_asr = Dataset(os.path.join(args.data_path, 'test2011asr'), tokenizer, args.sequence_length, token_style)
+    train_set = Dataset(os.path.join(args.data_path, 'train2012'), tokenizer, args.sequence_length, token_style, ar, True)
+    val_set = Dataset(os.path.join(args.data_path, 'dev2012'), tokenizer, args.sequence_length, token_style, ar, False)
+    test_set_ref = Dataset(os.path.join(args.data_path, 'test2011'), tokenizer, args.sequence_length, token_style, ar, False)
+    test_set_asr = Dataset(os.path.join(args.data_path, 'test2011asr'), tokenizer, args.sequence_length, token_style, ar, False)
     test_set = [test_set_ref, test_set_asr]
 elif args.language == 'bangla':
-    train_set = Dataset(os.path.join(args.data_path, 'train_bn'), tokenizer, args.sequence_length, token_style)
-    val_set = Dataset(os.path.join(args.data_path, 'dev_bn'), tokenizer, args.sequence_length, token_style)
-    test_set_news = Dataset(os.path.join(args.data_path, 'test_bn_news'), tokenizer, args.sequence_length, token_style)
-    test_set_ted = Dataset(os.path.join(args.data_path, 'test_bn_ted'), tokenizer, args.sequence_length, token_style)
+    train_set = Dataset(os.path.join(args.data_path, 'train_bn'), tokenizer, args.sequence_length, token_style, ar, True)
+    val_set = Dataset(os.path.join(args.data_path, 'dev_bn'), tokenizer, args.sequence_length, token_style, ar, False)
+    test_set_news = Dataset(os.path.join(args.data_path, 'test_bn_news'), tokenizer, args.sequence_length, token_style, ar, False)
+    test_set_ted = Dataset(os.path.join(args.data_path, 'test_bn_ted'), tokenizer, args.sequence_length, token_style, ar, False)
     test_set = [test_set_news, test_set_ted]
 elif args.language == 'english-bangla':
     train_set = Dataset([os.path.join(args.data_path, 'train2012'),
-                         os.path.join(args.data_path, 'train_bn')], tokenizer, args.sequence_length, token_style)
+                         os.path.join(args.data_path, 'train_bn')], tokenizer, args.sequence_length, token_style, ar, True)
     val_set = Dataset([os.path.join(args.data_path, 'dev2012'),
-                       os.path.join(args.data_path, 'dev_bn')], tokenizer, args.sequence_length, token_style)
-    test_set_ref = Dataset(os.path.join(args.data_path, 'test2011'), tokenizer, args.sequence_length, token_style)
-    test_set_asr = Dataset(os.path.join(args.data_path, 'test2011asr'), tokenizer, args.sequence_length, token_style)
-    test_set_bn = Dataset(os.path.join(args.data_path, 'test_bn_news'), tokenizer, args.sequence_length, token_style)
-    test_set_bn_ted = Dataset(os.path.join(args.data_path, 'test_bn_ted'), tokenizer, args.sequence_length, token_style)
+                       os.path.join(args.data_path, 'dev_bn')], tokenizer, args.sequence_length, token_style, ar, False)
+    test_set_ref = Dataset(os.path.join(args.data_path, 'test2011'), tokenizer, args.sequence_length, token_style, ar, False)
+    test_set_asr = Dataset(os.path.join(args.data_path, 'test2011asr'), tokenizer, args.sequence_length, token_style, ar, False)
+    test_set_bn = Dataset(os.path.join(args.data_path, 'test_bn_news'), tokenizer, args.sequence_length, token_style, ar, False)
+    test_set_bn_ted = Dataset(os.path.join(args.data_path, 'test_bn_ted'), tokenizer, args.sequence_length, token_style, ar, False)
     test_set = [test_set_ref, test_set_asr, test_set_bn, test_set_bn_ted]
 else:
     raise ValueError('Incorrect language argument for Dataset')

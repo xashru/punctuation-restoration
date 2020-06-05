@@ -54,13 +54,15 @@ def parse_data(file_path, tokenizer, sequence_len, token_style):
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, files, tokenizer, sequence_len, token_style):
+    def __init__(self, files, tokenizer, sequence_len, token_style, augment_rate, is_train):
         """
 
         :param files: single file or list of text files containing tokens and punctuations separated by tab in lines
         :param tokenizer: tokenizer that will be used to further tokenize word for BERT like models
         :param sequence_len: length of each sequence
         :param token_style: For getting index of special tokens in config.TOKEN_IDX
+        :param augment_rate: token change rate when preparing data
+        :param is_train: if false do not apply augmentation
         """
         if isinstance(files, list):
             self.data = []
@@ -68,6 +70,9 @@ class Dataset(torch.utils.data.Dataset):
                 self.data += parse_data(file, tokenizer, sequence_len, token_style)
         else:
             self.data = parse_data(files, tokenizer, sequence_len, token_style)
+        self.augment_rate = augment_rate
+        self.token_style = token_style
+        self.is_train = is_train
 
     def __len__(self):
         return len(self.data)
@@ -76,4 +81,10 @@ class Dataset(torch.utils.data.Dataset):
         x = self.data[index][0]
         y = self.data[index][1]
         attn_mask = self.data[index][2]
-        return torch.tensor(x), torch.tensor(y), torch.tensor(attn_mask)
+        x = torch.tensor(x)
+        y = torch.tensor(y)
+        attn_mask = torch.tensor(attn_mask)
+        if self.is_train:
+            r = torch.rand(x.shape) <= self.augment_rate
+            x[r] = TOKEN_IDX[self.token_style]['UNK']
+        return x, y, attn_mask

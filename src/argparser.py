@@ -16,6 +16,7 @@ def parse_arguments():
                         help='language, available options are english, bangla, english-bangla')
     parser.add_argument('--sequence-length', default=200, type=int,
                         help='sequence length to use when preparing dataset (default 200)')
+    parser.add_argument('--augment-rate', default=0.1, type=float, help='token change rate')
     parser.add_argument('--lr', default=1e-5, type=float, help='learning rate (default: 16)')
     parser.add_argument('--decay', default=0, type=float, help='weight decay (default: 1e-5)')
     parser.add_argument('--gradient-clip', default=-1, type=float, help='gradient clipping (default: -1 or none)')
