@@ -85,6 +85,6 @@ class Dataset(torch.utils.data.Dataset):
         y = torch.tensor(y)
         attn_mask = torch.tensor(attn_mask)
         if self.is_train:
-            r = torch.rand(x.shape) <= self.augment_rate
+            r = torch.rand(x.shape) < self.augment_rate
             x[r] = TOKEN_IDX[self.token_style]['UNK']
         return x, y, attn_mask

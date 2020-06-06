@@ -46,7 +46,8 @@ MODELS = {
     'distilbert-base-multilingual-cased': (DistilBertModel, DistilBertTokenizer, 768, 'bert'),
     'xlm-roberta-base': (XLMRobertaModel, XLMRobertaTokenizer, 768, 'roberta'),
     'xlm-roberta-large': (XLMRobertaModel, XLMRobertaTokenizer, 1024, 'roberta'),
-    'albert-large-v2': (AlbertForMaskedLM, AlbertTokenizer, 1024, 'albert'),
-    'albert-xlarge-v2': (AlbertForMaskedLM, AlbertTokenizer, 2048, 'albert'),
-    'albert-xxlarge-v2': (AlbertForMaskedLM, AlbertTokenizer, 4096, 'albert'),
+    'albert-base-v2': (AlbertModel, AlbertTokenizer, 768, 'albert'),
+    'albert-large-v2': (AlbertModel, AlbertTokenizer, 1024, 'albert'),
+    'albert-xlarge-v2': (AlbertModel, AlbertTokenizer, 2048, 'albert'),
+    'albert-xxlarge-v2': (AlbertModel, AlbertTokenizer, 4096, 'albert'),
 }
