@@ -21,6 +21,12 @@ TOKEN_IDX = {
         'END_SEQ': 2,
         'UNK': 3
     },
+    'albert': {
+        'START_SEQ': 2,
+        'PAD': 0,
+        'END_SEQ': 3,
+        'UNK': 1
+    },
 }
 
 # 'O' -> No punctuation
@@ -40,4 +46,7 @@ MODELS = {
     'distilbert-base-multilingual-cased': (DistilBertModel, DistilBertTokenizer, 768, 'bert'),
     'xlm-roberta-base': (XLMRobertaModel, XLMRobertaTokenizer, 768, 'roberta'),
     'xlm-roberta-large': (XLMRobertaModel, XLMRobertaTokenizer, 1024, 'roberta'),
+    'albert-large-v2': (AlbertForMaskedLM, AlbertTokenizer, 1024, 'albert'),
+    'albert-xlarge-v2': (AlbertForMaskedLM, AlbertTokenizer, 2048, 'albert'),
+    'albert-xxlarge-v2': (AlbertForMaskedLM, AlbertTokenizer, 4096, 'albert'),
 }
