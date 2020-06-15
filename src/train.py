@@ -4,6 +4,7 @@ import torch.nn as nn
 import numpy as np
 from torch.utils import data
 import torch.multiprocessing
+from tqdm import tqdm
 
 from argparser import parse_arguments
 from dataset import Dataset
@@ -84,7 +85,7 @@ def validate(data_loader):
     total = 0
     val_loss = 0
     with torch.no_grad():
-        for x, y, att in data_loader:
+        for x, y, att in tqdm(data_loader, desc='eval'):
             x, y, att = x.to(device), y.to(device), att.to(device)
             y_predict = deep_punctuation(x, att)
             y = y.view(-1)
@@ -111,7 +112,7 @@ def test(data_loader):
     total = 0
     test_loss = 0
     with torch.no_grad():
-        for x, y, att in data_loader:
+        for x, y, att in tqdm(data_loader, desc='test'):
             x, y, att = x.to(device), y.to(device), att.to(device)
             y_predict = deep_punctuation(x, att)
             y = y.view(-1)
@@ -150,7 +151,7 @@ def train():
         correct = 0
         total = 0
         deep_punctuation.train()
-        for x, y, att in train_loader:
+        for x, y, att in tqdm(train_loader, desc='train'):
             x, y, att = x.to(device), y.to(device), att.to(device)
             y_predict = deep_punctuation(x, att)
 
