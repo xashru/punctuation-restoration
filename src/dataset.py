@@ -54,7 +54,7 @@ def parse_data(file_path, tokenizer, sequence_len, token_style):
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, files, tokenizer, sequence_len, token_style, augment_rate, is_train):
+    def __init__(self, files, tokenizer, sequence_len, token_style, is_train=False, augment_rate=0.1):
         """
 
         :param files: single file or list of text files containing tokens and punctuations separated by tab in lines
