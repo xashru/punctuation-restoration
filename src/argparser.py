@@ -10,6 +10,8 @@ def parse_arguments():
                         help='pretrained model to use, available: xlm-roberta-base (default) and xlm-roberta-large')
     parser.add_argument('--freeze-bert', default=False, type=lambda x: (str(x).lower() == 'true'),
                         help='Freeze BERT layer or not')
+    parser.add_argument('--use-crf', default=True, type=lambda x: (str(x).lower() == 'true'),
+                        help='whether to use CRF or not')
     parser.add_argument('--data-path', default='data/', type=str,
                         help='path to train/val/test datasets')
     parser.add_argument('--language', default='english', type=str,
