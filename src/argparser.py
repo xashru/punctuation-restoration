@@ -10,6 +10,7 @@ def parse_arguments():
                         help='pretrained model to use, available: xlm-roberta-base (default) and xlm-roberta-large')
     parser.add_argument('--freeze-bert', default=False, type=lambda x: (str(x).lower() == 'true'),
                         help='Freeze BERT layer or not')
+    parser.add_argument('--lstm-dim', default=-1, type=int, help='hidden dimension in LSTM layer')
     parser.add_argument('--use-crf', default=True, type=lambda x: (str(x).lower() == 'true'),
                         help='whether to use CRF or not')
     parser.add_argument('--data-path', default='data/', type=str,
@@ -18,10 +19,10 @@ def parse_arguments():
                         help='language, available options are english, bangla, english-bangla')
     parser.add_argument('--sequence-length', default=200, type=int,
                         help='sequence length to use when preparing dataset (default 200)')
-    parser.add_argument('--augment-rate', default=0.1, type=float, help='token change rate')
+    parser.add_argument('--augment-rate', default=0., type=float, help='token change rate')
     parser.add_argument('--lr', default=1e-5, type=float, help='learning rate (default: 16)')
     parser.add_argument('--decay', default=0, type=float, help='weight decay (default: 1e-5)')
-    parser.add_argument('--gradient-clip', default=-1, type=float, help='gradient clipping (default: -1 or none)')
+    parser.add_argument('--gradient-clip', default=-1, type=float, help='gradient clipping (default: -1 i.e., none)')
     parser.add_argument('--batch-size', default=16, type=int, help='batch size (default: 16)')
     parser.add_argument('--epoch', default=10, type=int, help='total epochs (default: 10)')
     parser.add_argument('--save-path', default='out/', type=str, help='model/log save directory')
