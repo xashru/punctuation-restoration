@@ -38,7 +38,7 @@ if args.language == 'english':
                            token_style=token_style, is_train=False)
     test_set_asr = Dataset(os.path.join(args.data_path, 'test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
-    test_set = [test_set_ref, test_set_asr]
+    test_set = [val_set, test_set_ref, test_set_asr]
 elif args.language == 'bangla':
     train_set = Dataset(os.path.join(args.data_path, 'train_bn'), tokenizer=tokenizer, sequence_len=sequence_len,
                         token_style=token_style, is_train=True, augment_rate=ar)
@@ -48,7 +48,7 @@ elif args.language == 'bangla':
                             token_style=token_style, is_train=False)
     test_set_ted = Dataset(os.path.join(args.data_path, 'test_bn_ted'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
-    test_set = [test_set_news, test_set_ted]
+    test_set = [val_set, test_set_news, test_set_ted]
 elif args.language == 'english-bangla':
     train_set = Dataset([os.path.join(args.data_path, 'train2012'), os.path.join(args.data_path, 'train_bn')],
                         tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=True, augment_rate=ar)
@@ -62,7 +62,7 @@ elif args.language == 'english-bangla':
                           token_style=token_style, is_train=False)
     test_set_bn_ted = Dataset(os.path.join(args.data_path, 'test_bn_ted'), tokenizer=tokenizer, sequence_len=sequence_len,
                               token_style=token_style, is_train=False)
-    test_set = [test_set_ref, test_set_asr, test_set_bn, test_set_bn_ted]
+    test_set = [val_set, test_set_ref, test_set_asr, test_set_bn, test_set_bn_ted]
 else:
     raise ValueError('Incorrect language argument for Dataset')
 
@@ -105,9 +105,9 @@ def validate(data_loader):
             x, y, att = x.to(device), y.to(device), att.to(device)
 
             if args.use_crf:
-                crf_out, y_predict = deep_punctuation(x, att, y)
+                y_predict = deep_punctuation(x, att, y)
                 # PyTorch CRF returns log likelihood
-                loss = crf_out * -1.0
+                loss = deep_punctuation.log_likelihood(x, att, y)
                 y_predict = y_predict.view(-1)
                 y = y.view(-1)
             else:
@@ -125,7 +125,7 @@ def validate(data_loader):
             else:
                 correct += torch.sum(att * (torch.argmax(y_predict, dim=1) == y).long()).item()
             total += torch.sum(att).item()
-    return correct/total, 100.0*val_loss/num_iteration
+    return correct/total, val_loss/num_iteration
 
 
 def test(data_loader):
@@ -140,15 +140,12 @@ def test(data_loader):
     fn = np.zeros(1+len(punctuation_dict), dtype=np.int)
     correct = 0
     total = 0
-    test_loss = 0
     with torch.no_grad():
         for x, y, att in tqdm(data_loader, desc='test'):
             x, y, att = x.to(device), y.to(device), att.to(device)
 
             if args.use_crf:
-                crf_out, y_predict = deep_punctuation(x, att, y)
-                # PyTorch CRF returns log likelihood
-                loss = crf_out * -1.0
+                y_predict = deep_punctuation(x, att, y)
                 y_predict = y_predict.view(-1)
                 y = y.view(-1)
             else:
@@ -156,9 +153,7 @@ def test(data_loader):
                 y_predict = deep_punctuation(x, att)
                 y_predict = y_predict.view(-1, y_predict.shape[2])
                 y = y.view(-1)
-                loss = criterion(y_predict, y)
 
-            test_loss += loss.item()
             num_iteration += 1
             att = att.view(-1)
             if args.use_crf:
@@ -171,7 +166,7 @@ def test(data_loader):
                 if cor == -1:
                     # padding token
                     continue
-                prd = torch.argmax(y_predict[i])
+                prd = y_predict[i]
                 if cor == prd:
                     tp[cor] += 1
                 else:
@@ -200,10 +195,7 @@ def train():
             x, y, att = x.to(device), y.to(device), att.to(device)
 
             if args.use_crf:
-                crf_out, _ = deep_punctuation(x, att, y)
-                # PyTorch CRF returns log likelihood
-                loss = crf_out * -1.0
-                y = y.view(-1)
+                loss = deep_punctuation.log_likelihood(x, att, y)
             else:
                 # flat labels and predictions for calculating loss
                 y_predict = deep_punctuation(x, att)
@@ -219,7 +211,6 @@ def train():
                 torch.nn.utils.clip_grad_norm_(deep_punctuation.parameters(), 5)
             optimizer.step()
 
-            att = att.view(-1)
         train_loss /= train_iteration
         log = 'epoch: {}, Train loss: {}'.format(epoch, train_loss)
         with open(log_path, 'a') as f:
