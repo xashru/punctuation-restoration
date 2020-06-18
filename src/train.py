@@ -106,8 +106,8 @@ def validate(data_loader):
             loss = criterion(y_predict, y)
             val_loss += loss.item()
             num_iteration += 1
-            correct += torch.sum(torch.argmax(y_predict, dim=1) == y).item()
-            total += y.shape[0]
+            correct += torch.sum(att * (torch.argmax(y_predict, dim=1) == y).long()).item()
+            total += torch.sum(att).item()
     return correct/total, val_loss/num_iteration
 
 
@@ -133,8 +133,8 @@ def test(data_loader):
             loss = criterion(y_predict, y)
             test_loss += loss.item()
             num_iteration += 1
-            correct += torch.sum(torch.argmax(y_predict, dim=1) == y).item()
-            total += y.shape[0]
+            correct += torch.sum(att * (torch.argmax(y_predict, dim=1) == y).long()).item()
+            total += torch.sum(att).item()
             for i in range(y.shape[0]):
                 cor = y[i]
                 prd = torch.argmax(y_predict[i])
@@ -182,8 +182,8 @@ def train():
                 torch.nn.utils.clip_grad_norm_(deep_punctuation.parameters(), 5)
             optimizer.step()
 
-            correct += torch.sum(torch.argmax(y_predict, dim=1) == y).item()
-            total += y.shape[0]
+            correct += torch.sum(att * (torch.argmax(y_predict, dim=1) == y).long()).item()
+            total += torch.sum(att).item()
         train_loss /= train_iteration
         log = 'epoch: {}, Train loss: {}, Train accuracy: {}'.format(epoch, train_loss, correct / total)
         with open(log_path, 'a') as f:
