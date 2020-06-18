@@ -30,7 +30,7 @@ def parse_data(file_path, tokenizer, sequence_len, token_style):
                 # then start next sequence from this token
                 if len(tokens) + len(x) >= sequence_len:
                     x = x + [TOKEN_IDX[token_style]['PAD'] for _ in range(sequence_len - 1 - len(x))]
-                    y = y + [-1 for _ in range(sequence_len - 1 - len(y))]
+                    y = y + [0 for _ in range(sequence_len - 1 - len(y))]
                     break
                 else:
                     for i in range(len(tokens) - 1):
@@ -45,7 +45,7 @@ def parse_data(file_path, tokenizer, sequence_len, token_style):
             # This might happen when we reach the end of the text
             if len(x) < sequence_len - 1:
                 x = x + [TOKEN_IDX[token_style]['PAD'] for _ in range(sequence_len - 1 - len(x))]
-                y = y + [-1 for _ in range(sequence_len - 1 - len(y))]
+                y = y + [0 for _ in range(sequence_len - 1 - len(y))]
             x.append(TOKEN_IDX[token_style]['END_SEQ'])
             y.append(0)
             attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x]
