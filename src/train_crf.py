@@ -44,11 +44,11 @@ elif args.language == 'bangla':
                         token_style=token_style, is_train=True, augment_rate=ar)
     val_set = Dataset(os.path.join(args.data_path, 'dev_bn'), tokenizer=tokenizer, sequence_len=sequence_len,
                       token_style=token_style, is_train=False)
-    test_set_news = Dataset(os.path.join(args.data_path, 'test_bn_news'), tokenizer=tokenizer, sequence_len=sequence_len,
-                            token_style=token_style, is_train=False)
-    test_set_ted = Dataset(os.path.join(args.data_path, 'test_bn_ted'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_set_ref = Dataset(os.path.join(args.data_path, 'test_bn_ref'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
-    test_set = [val_set, test_set_news, test_set_ted]
+    test_set_asr = Dataset(os.path.join(args.data_path, 'test_bn_asr'), tokenizer=tokenizer, sequence_len=sequence_len,
+                           token_style=token_style, is_train=False)
+    test_set = [val_set, test_set_ref, test_set_asr]
 elif args.language == 'english-bangla':
     train_set = Dataset([os.path.join(args.data_path, 'train2012'), os.path.join(args.data_path, 'train_bn')],
                         tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=True, augment_rate=ar)
@@ -58,11 +58,11 @@ elif args.language == 'english-bangla':
                            token_style=token_style, is_train=False)
     test_set_asr = Dataset(os.path.join(args.data_path, 'test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
-    test_set_bn = Dataset(os.path.join(args.data_path, 'test_bn_news'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_bn_ref = Dataset(os.path.join(args.data_path, 'test_bn_ref'), tokenizer=tokenizer, sequence_len=sequence_len,
                           token_style=token_style, is_train=False)
-    test_set_bn_ted = Dataset(os.path.join(args.data_path, 'test_bn_ted'), tokenizer=tokenizer, sequence_len=sequence_len,
-                              token_style=token_style, is_train=False)
-    test_set = [val_set, test_set_ref, test_set_asr, test_set_bn, test_set_bn_ted]
+    test_bn_asr = Dataset(os.path.join(args.data_path, 'test_bn_asr'), tokenizer=tokenizer, sequence_len=sequence_len,
+                          token_style=token_style, is_train=False)
+    test_set = [val_set, test_set_ref, test_set_asr, test_bn_ref, test_bn_asr]
 else:
     raise ValueError('Incorrect language argument for Dataset')
 
