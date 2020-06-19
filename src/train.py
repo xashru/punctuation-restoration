@@ -106,6 +106,7 @@ def validate(data_loader):
             loss = criterion(y_predict, y)
             val_loss += loss.item()
             num_iteration += 1
+            att = att.view(-1)
             correct += torch.sum(att * (torch.argmax(y_predict, dim=1) == y).long()).item()
             total += torch.sum(att).item()
     return correct/total, val_loss/num_iteration
@@ -133,6 +134,7 @@ def test(data_loader):
             loss = criterion(y_predict, y)
             test_loss += loss.item()
             num_iteration += 1
+            att = att.view(-1)
             correct += torch.sum(att * (torch.argmax(y_predict, dim=1) == y).long()).item()
             total += torch.sum(att).item()
             for i in range(y.shape[0]):
@@ -181,7 +183,7 @@ def train():
             if args.gradient_clip > 0:
                 torch.nn.utils.clip_grad_norm_(deep_punctuation.parameters(), 5)
             optimizer.step()
-
+            att = att.view(-1)
             correct += torch.sum(att * (torch.argmax(y_predict, dim=1) == y).long()).item()
             total += torch.sum(att).item()
         train_loss /= train_iteration
