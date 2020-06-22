@@ -36,9 +36,9 @@ class DeepPunctuation(nn.Module):
 
 
 class DeepPunctuationCRF(nn.Module):
-    def __init__(self, pretrained_model, freeze_bert=False):
+    def __init__(self, pretrained_model, freeze_bert=False, lstm_dim=-1):
         super(DeepPunctuationCRF, self).__init__()
-        self.bert_lstm = DeepPunctuation(pretrained_model, freeze_bert)
+        self.bert_lstm = DeepPunctuation(pretrained_model, freeze_bert, lstm_dim)
         self.crf = CRF(len(punctuation_dict), batch_first=True)
 
     def log_likelihood(self, x, attn_masks, y):

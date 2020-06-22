@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from argparser import parse_arguments
 from dataset import Dataset
-from model import DeepPunctuation
+from model import DeepPunctuation, DeepPunctuationCRF
 from config import *
 
 
@@ -28,31 +28,35 @@ tokenizer = MODELS[args.pretrained_model][1].from_pretrained(args.pretrained_mod
 token_style = MODELS[args.pretrained_model][3]
 ar = args.augment_rate
 sequence_len = args.sequence_length
+at = args.augment_type
 
 # Datasets
 if args.language == 'english':
-    train_set = Dataset(os.path.join(args.data_path, 'train2012'), tokenizer=tokenizer, sequence_len=sequence_len,
-                        token_style=token_style, is_train=True, augment_rate=ar)
-    val_set = Dataset(os.path.join(args.data_path, 'dev2012'), tokenizer=tokenizer, sequence_len=sequence_len,
+    train_set = Dataset(os.path.join(args.data_path, 'en/train2012'), tokenizer=tokenizer, sequence_len=sequence_len,
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=at)
+    val_set = Dataset(os.path.join(args.data_path, 'en/dev2012'), tokenizer=tokenizer, sequence_len=sequence_len,
                       token_style=token_style, is_train=False)
-    test_set_ref = Dataset(os.path.join(args.data_path, 'test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_set_ref = Dataset(os.path.join(args.data_path, 'en/test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
-    test_set_asr = Dataset(os.path.join(args.data_path, 'test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
     test_set = [val_set, test_set_ref, test_set_asr]
 elif args.language == 'bangla':
-    train_set = Dataset(os.path.join(args.data_path, 'train_bn'), tokenizer=tokenizer, sequence_len=sequence_len,
-                        token_style=token_style, is_train=True, augment_rate=ar)
-    val_set = Dataset(os.path.join(args.data_path, 'dev_bn'), tokenizer=tokenizer, sequence_len=sequence_len,
+    train_set = Dataset(os.path.join(args.data_path, 'bn/train'), tokenizer=tokenizer, sequence_len=sequence_len,
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=at)
+    val_set = Dataset(os.path.join(args.data_path, 'bn/dev'), tokenizer=tokenizer, sequence_len=sequence_len,
                       token_style=token_style, is_train=False)
-    test_set_ref = Dataset(os.path.join(args.data_path, 'test_bn_ref'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_set = Dataset(os.path.join(args.data_path, 'bn/test'), tokenizer=tokenizer, sequence_len=sequence_len,
+                       token_style=token_style, is_train=False)
+    test_set_ref = Dataset(os.path.join(args.data_path, 'bn/test_ref'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
-    test_set_asr = Dataset(os.path.join(args.data_path, 'test_bn_asr'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_set_asr = Dataset(os.path.join(args.data_path, 'bn/test_asr'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
-    test_set = [val_set, test_set_ref, test_set_asr]
+    test_set = [val_set, test_set, test_set_ref, test_set_asr]
 elif args.language == 'english-bangla':
     train_set = Dataset([os.path.join(args.data_path, 'train2012'), os.path.join(args.data_path, 'train_bn')],
-                        tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=True, augment_rate=ar)
+                        tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=True,
+                        augment_rate=ar, augment_type=at)
     val_set = Dataset([os.path.join(args.data_path, 'dev2012'), os.path.join(args.data_path, 'dev_bn')],
                       tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=False)
     test_set_ref = Dataset(os.path.join(args.data_path, 'test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
@@ -83,7 +87,10 @@ log_path = os.path.join(args.save_path, args.name + '_logs.txt')
 
 # Model
 device = torch.device('cuda' if (args.cuda and torch.cuda.is_available()) else 'cpu')
-deep_punctuation = DeepPunctuation(args.pretrained_model, args.freeze_bert)
+if args.use_crf:
+    deep_punctuation = DeepPunctuationCRF(args.pretrained_model, freeze_bert=args.freeze_bert, lstm_dim=args.lstm_dim)
+else:
+    deep_punctuation = DeepPunctuation(args.pretrained_model, freeze_bert=args.freeze_bert, lstm_dim=args.lstm_dim)
 deep_punctuation.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(deep_punctuation.parameters(), lr=args.lr, weight_decay=args.decay)
