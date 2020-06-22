@@ -15,7 +15,6 @@ from config import *
 torch.multiprocessing.set_sharing_strategy('file_system')   # https://github.com/pytorch/pytorch/issues/11201
 
 args = parse_arguments()
-args.use_crf = False
 
 # for reproducibility
 torch.manual_seed(args.seed)
@@ -46,28 +45,30 @@ elif args.language == 'bangla':
                         token_style=token_style, is_train=True, augment_rate=ar, augment_type=at)
     val_set = Dataset(os.path.join(args.data_path, 'bn/dev'), tokenizer=tokenizer, sequence_len=sequence_len,
                       token_style=token_style, is_train=False)
-    test_set = Dataset(os.path.join(args.data_path, 'bn/test'), tokenizer=tokenizer, sequence_len=sequence_len,
-                       token_style=token_style, is_train=False)
+    test_set_news = Dataset(os.path.join(args.data_path, 'bn/test_news'), tokenizer=tokenizer, sequence_len=sequence_len,
+                            token_style=token_style, is_train=False)
     test_set_ref = Dataset(os.path.join(args.data_path, 'bn/test_ref'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
     test_set_asr = Dataset(os.path.join(args.data_path, 'bn/test_asr'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
-    test_set = [val_set, test_set, test_set_ref, test_set_asr]
+    test_set = [val_set, test_set_news, test_set_ref, test_set_asr]
 elif args.language == 'english-bangla':
-    train_set = Dataset([os.path.join(args.data_path, 'train2012'), os.path.join(args.data_path, 'train_bn')],
+    train_set = Dataset([os.path.join(args.data_path, 'en/train2012'), os.path.join(args.data_path, 'bn/train_bn')],
                         tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=True,
                         augment_rate=ar, augment_type=at)
-    val_set = Dataset([os.path.join(args.data_path, 'dev2012'), os.path.join(args.data_path, 'dev_bn')],
+    val_set = Dataset([os.path.join(args.data_path, 'en/dev2012'), os.path.join(args.data_path, 'bn/dev_bn')],
                       tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=False)
-    test_set_ref = Dataset(os.path.join(args.data_path, 'test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_set_ref = Dataset(os.path.join(args.data_path, 'en/test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
-    test_set_asr = Dataset(os.path.join(args.data_path, 'test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
-    test_bn_ref = Dataset(os.path.join(args.data_path, 'test_bn_ref'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_set_news = Dataset(os.path.join(args.data_path, 'bn/test_news'), tokenizer=tokenizer, sequence_len=sequence_len,
+                            token_style=token_style, is_train=False)
+    test_bn_ref = Dataset(os.path.join(args.data_path, 'bn/test_ref'), tokenizer=tokenizer, sequence_len=sequence_len,
                           token_style=token_style, is_train=False)
-    test_bn_asr = Dataset(os.path.join(args.data_path, 'test_bn_asr'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_bn_asr = Dataset(os.path.join(args.data_path, 'bn/test_asr'), tokenizer=tokenizer, sequence_len=sequence_len,
                           token_style=token_style, is_train=False)
-    test_set = [val_set, test_set_ref, test_set_asr, test_bn_ref, test_bn_asr]
+    test_set = [val_set, test_set_ref, test_set_asr, test_set_news, test_bn_ref, test_bn_asr]
 else:
     raise ValueError('Incorrect language argument for Dataset')
 
@@ -108,14 +109,21 @@ def validate(data_loader):
     with torch.no_grad():
         for x, y, att in tqdm(data_loader, desc='eval'):
             x, y, att = x.to(device), y.to(device), att.to(device)
-            y_predict = deep_punctuation(x, att)
-            y = y.view(-1)
-            y_predict = y_predict.view(-1, y_predict.shape[2])
-            loss = criterion(y_predict, y)
+            if args.use_crf:
+                y_predict = deep_punctuation(x, att, y)
+                loss = deep_punctuation.log_likelihood(x, att, y)
+                y_predict = y_predict.view(-1)
+                y = y.view(-1)
+            else:
+                y_predict = deep_punctuation(x, att)
+                y = y.view(-1)
+                y_predict = y_predict.view(-1, y_predict.shape[2])
+                loss = criterion(y_predict, y)
+                y_predict = torch.argmax(y_predict, dim=1).view(-1)
             val_loss += loss.item()
             num_iteration += 1
             att = att.view(-1)
-            correct += torch.sum(att * (torch.argmax(y_predict, dim=1) == y).long()).item()
+            correct += torch.sum(att * (y_predict == y).long()).item()
             total += torch.sum(att).item()
     return correct/total, val_loss/num_iteration
 
@@ -136,18 +144,22 @@ def test(data_loader):
     with torch.no_grad():
         for x, y, att in tqdm(data_loader, desc='test'):
             x, y, att = x.to(device), y.to(device), att.to(device)
-            y_predict = deep_punctuation(x, att)
-            y = y.view(-1)
-            y_predict = y_predict.view(-1, y_predict.shape[2])
-            loss = criterion(y_predict, y)
-            test_loss += loss.item()
+            if args.use_crf:
+                y_predict = deep_punctuation(x, att, y)
+                y_predict = y_predict.view(-1)
+                y = y.view(-1)
+            else:
+                y_predict = deep_punctuation(x, att)
+                y = y.view(-1)
+                y_predict = y_predict.view(-1, y_predict.shape[2])
+                y_predict = torch.argmax(y_predict, dim=1).view(-1)
             num_iteration += 1
             att = att.view(-1)
-            correct += torch.sum(att * (torch.argmax(y_predict, dim=1) == y).long()).item()
+            correct += torch.sum(att * (y_predict == y).long()).item()
             total += torch.sum(att).item()
             for i in range(y.shape[0]):
                 cor = y[i]
-                prd = torch.argmax(y_predict[i])
+                prd = y_predict[i]
                 if cor == prd:
                     tp[cor] += 1
                 else:
@@ -176,24 +188,31 @@ def train():
         deep_punctuation.train()
         for x, y, att in tqdm(train_loader, desc='train'):
             x, y, att = x.to(device), y.to(device), att.to(device)
-            y_predict = deep_punctuation(x, att)
-
-            # flat labels and predictions for calculating loss
-            y = y.view(-1)
-            y_predict = y_predict.view(-1, y_predict.shape[2])
+            if args.use_crf:
+                y_predict = deep_punctuation(x, att, y)
+                loss = deep_punctuation.log_likelihood(x, att, y)
+                y_predict = y_predict.view(-1)
+                y = y.view(-1)
+            else:
+                y_predict = deep_punctuation(x, att)
+                y_predict = y_predict.view(-1, y_predict.shape[2])
+                y = y.view(-1)
+                loss = criterion(y_predict, y)
+                y_predict = torch.argmax(y_predict, dim=1).view(-1)
 
             optimizer.zero_grad()
-            loss = criterion(y_predict, y)
             train_loss += loss.item()
             train_iteration += 1
-
             loss.backward()
+
             if args.gradient_clip > 0:
-                torch.nn.utils.clip_grad_norm_(deep_punctuation.parameters(), 5)
+                torch.nn.utils.clip_grad_norm_(deep_punctuation.parameters(), args.gradient_clip)
             optimizer.step()
+
             att = att.view(-1)
-            correct += torch.sum(att * (torch.argmax(y_predict, dim=1) == y).long()).item()
+            correct += torch.sum(att * (y_predict == y).long()).item()
             total += torch.sum(att).item()
+
         train_loss /= train_iteration
         log = 'epoch: {}, Train loss: {}, Train accuracy: {}'.format(epoch, train_loss, correct / total)
         with open(log_path, 'a') as f:
@@ -226,4 +245,5 @@ def train():
             f.write(log_text[:-1] + '\n\n')
 
 
-train()
+if __name__ == '__main__':
+    train()

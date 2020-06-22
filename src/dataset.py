@@ -79,7 +79,7 @@ class Dataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.data)
 
-    def augment(self, x, y):
+    def _augment(self, x, y):
         x_aug = []
         y_aug = []
         for i in range(len(x)):
@@ -100,7 +100,7 @@ class Dataset(torch.utils.data.Dataset):
 
         # len decreased due to delete
         x_aug = x_aug + [TOKEN_IDX[self.token_style]['PAD'] for _ in range(self.sequence_len - len(x_aug))]
-        y_aug = y_aug + [0 for _ in range(self.sequence_len - 1 - len(y_aug))]
+        y_aug = y_aug + [0 for _ in range(self.sequence_len - len(y_aug))]
 
         attn_mask = [1 if token != TOKEN_IDX[self.token_style]['PAD'] else 0 for token in x]
         return x_aug, y_aug, attn_mask

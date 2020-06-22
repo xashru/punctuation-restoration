@@ -24,7 +24,7 @@ def parse_arguments():
     parser.add_argument('--lr', default=1e-5, type=float, help='learning rate (default: 16)')
     parser.add_argument('--decay', default=0, type=float, help='weight decay (default: 1e-5)')
     parser.add_argument('--gradient-clip', default=-1, type=float, help='gradient clipping (default: -1 i.e., none)')
-    parser.add_argument('--batch-size', default=16, type=int, help='batch size (default: 16)')
+    parser.add_argument('--batch-size', default=8, type=int, help='batch size (default: 16)')
     parser.add_argument('--epoch', default=10, type=int, help='total epochs (default: 10)')
     parser.add_argument('--save-path', default='out/', type=str, help='model/log save directory')
 
