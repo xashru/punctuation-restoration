@@ -48,7 +48,6 @@ def parse_data(file_path, tokenizer, sequence_len, token_style):
                 y = y + [0 for _ in range(sequence_len - len(y))]
             attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x]
             data_items.append([x, y, attn_mask])
-    print('Dataset len:', len(data_items))
     return data_items
 
 
@@ -90,17 +89,14 @@ class Dataset(torch.utils.data.Dataset):
                 x_aug.append(x[i])
                 y_aug.append(y[i])
 
-        if len(x_aug) >= self.sequence_len:
+        if len(x_aug) > self.sequence_len:
             # len increased due to insert
-            x_aug = x_aug[0:self.sequence_len - 1]
-            y_aug = y_aug[0:self.sequence_len - 1]
-
-        x_aug.append(TOKEN_IDX[self.token_style]['END_SEQ'])
-        y_aug.append(0)
-
-        # len decreased due to delete
-        x_aug = x_aug + [TOKEN_IDX[self.token_style]['PAD'] for _ in range(self.sequence_len - len(x_aug))]
-        y_aug = y_aug + [0 for _ in range(self.sequence_len - len(y_aug))]
+            x_aug = x_aug[0:self.sequence_len]
+            y_aug = y_aug[0:self.sequence_len]
+        elif len(x_aug) < self.sequence_len:
+            # len decreased due to delete
+            x_aug = x_aug + [TOKEN_IDX[self.token_style]['PAD'] for _ in range(self.sequence_len - len(x_aug))]
+            y_aug = y_aug + [0 for _ in range(self.sequence_len - len(y_aug))]
 
         attn_mask = [1 if token != TOKEN_IDX[self.token_style]['PAD'] else 0 for token in x]
         return x_aug, y_aug, attn_mask
