@@ -39,6 +39,14 @@ def augment_sub_del(x, y, x_aug, y_aug, i, token_style):
         augment_delete(x, y, x_aug, y_aug, i, token_style)
 
 
+def augment_del_ins(x, y, x_aug, y_aug, i, token_style):
+    r = np.random.randint(2)
+    if r == 0:
+        augment_delete(x, y, x_aug, y_aug, i, token_style)
+    else:
+        augment_insert(x, y, x_aug, y_aug, i, token_style)
+
+
 def augment_all(x, y, x_aug, y_aug, i, token_style):
     r = np.random.randint(3)
     if r == 0:
@@ -56,5 +64,6 @@ AUGMENTATIONS = {
     'delete': augment_delete,
     'sub_ins': augment_sub_ins,
     'sub_del': augment_sub_del,
+    'del_ins': augment_del_ins,
     'all': augment_all
 }
