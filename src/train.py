@@ -107,8 +107,8 @@ def validate(data_loader):
     total = 0
     val_loss = 0
     with torch.no_grad():
-        for x, y, att in tqdm(data_loader, desc='eval'):
-            x, y, att = x.to(device), y.to(device), att.to(device)
+        for x, y, att, y_mask in tqdm(data_loader, desc='eval'):
+            x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
             if args.use_crf:
                 y_predict = deep_punctuation(x, att, y)
                 loss = deep_punctuation.log_likelihood(x, att, y)
@@ -122,9 +122,9 @@ def validate(data_loader):
                 y_predict = torch.argmax(y_predict, dim=1).view(-1)
             val_loss += loss.item()
             num_iteration += 1
-            att = att.view(-1)
-            correct += torch.sum(att * (y_predict == y).long()).item()
-            total += torch.sum(att).item()
+            y_mask = y_mask.view(-1)
+            correct += torch.sum(y_mask * (y_predict == y).long()).item()
+            total += torch.sum(y_mask).item()
     return correct/total, val_loss/num_iteration
 
 
@@ -140,10 +140,9 @@ def test(data_loader):
     fn = np.zeros(1+len(punctuation_dict), dtype=np.int)
     correct = 0
     total = 0
-    test_loss = 0
     with torch.no_grad():
-        for x, y, att in tqdm(data_loader, desc='test'):
-            x, y, att = x.to(device), y.to(device), att.to(device)
+        for x, y, att, y_mask in tqdm(data_loader, desc='test'):
+            x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
             if args.use_crf:
                 y_predict = deep_punctuation(x, att, y)
                 y_predict = y_predict.view(-1)
@@ -154,10 +153,14 @@ def test(data_loader):
                 y_predict = y_predict.view(-1, y_predict.shape[2])
                 y_predict = torch.argmax(y_predict, dim=1).view(-1)
             num_iteration += 1
-            att = att.view(-1)
-            correct += torch.sum(att * (y_predict == y).long()).item()
-            total += torch.sum(att).item()
+            y_mask = y_mask.view(-1)
+            correct += torch.sum(y_mask * (y_predict == y).long()).item()
+            total += torch.sum(y_mask).item()
             for i in range(y.shape[0]):
+                if y_mask[i] == 0:
+                    # we can ignore this because we know there won't be any punctuation in this position
+                    # since we created this position due to padding or sub-word tokenization
+                    continue
                 cor = y[i]
                 prd = y_predict[i]
                 if cor == prd:
@@ -186,8 +189,8 @@ def train():
         correct = 0
         total = 0
         deep_punctuation.train()
-        for x, y, att in tqdm(train_loader, desc='train'):
-            x, y, att = x.to(device), y.to(device), att.to(device)
+        for x, y, att, y_mask in tqdm(train_loader, desc='train'):
+            x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
             if args.use_crf:
                 y_predict = deep_punctuation(x, att, y)
                 loss = deep_punctuation.log_likelihood(x, att, y)
@@ -209,9 +212,9 @@ def train():
                 torch.nn.utils.clip_grad_norm_(deep_punctuation.parameters(), args.gradient_clip)
             optimizer.step()
 
-            att = att.view(-1)
-            correct += torch.sum(att * (y_predict == y).long()).item()
-            total += torch.sum(att).item()
+            y_mask = y_mask.view(-1)
+            correct += torch.sum(y_mask * (y_predict == y).long()).item()
+            total += torch.sum(y_mask).item()
 
         train_loss /= train_iteration
         log = 'epoch: {}, Train loss: {}, Train accuracy: {}'.format(epoch, train_loss, correct / total)
