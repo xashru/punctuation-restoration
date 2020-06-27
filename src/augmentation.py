@@ -2,6 +2,11 @@ from config import TOKEN_IDX
 import numpy as np
 
 
+tokenizer = None
+# substitution strategy: 'unk' -> replace with unknown tokens, 'rand' -> replace with random tokens from vocabulary
+sub_style = 'unk'
+
+
 def augment_none(x, y, y_mask, x_aug, y_aug, y_mask_aug, i, token_style):
     x_aug.append(x[i])
     y_aug.append(y[i])
@@ -9,7 +14,10 @@ def augment_none(x, y, y_mask, x_aug, y_aug, y_mask_aug, i, token_style):
 
 
 def augment_substitute(x, y, y_mask, x_aug, y_aug, y_mask_aug, i, token_style):
-    x_aug.append(TOKEN_IDX[token_style]['UNK'])
+    if sub_style == 'rand':
+        x_aug.append(np.random.randint(tokenizer.vocab_size))
+    else:
+        x_aug.append(TOKEN_IDX[token_style]['UNK'])
     y_aug.append(y[i])
     y_mask_aug.append(y_mask[i])
 

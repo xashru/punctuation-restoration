@@ -21,6 +21,7 @@ def parse_arguments():
                         help='sequence length to use when preparing dataset (default 256)')
     parser.add_argument('--augment-rate', default=0., type=float, help='token change rate')
     parser.add_argument('--augment-type', default='none', type=str, help='which augmentation to use')
+    parser.add_argument('--sub-style', default='unk', type=str, help='replacement strategy for substitution augment')
     parser.add_argument('--lr', default=1e-5, type=float, help='learning rate (default: 16)')
     parser.add_argument('--decay', default=0, type=float, help='weight decay (default: 1e-5)')
     parser.add_argument('--gradient-clip', default=-1, type=float, help='gradient clipping (default: -1 i.e., none)')

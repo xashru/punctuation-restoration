@@ -10,7 +10,7 @@ from argparser import parse_arguments
 from dataset import Dataset
 from model import DeepPunctuation, DeepPunctuationCRF
 from config import *
-
+import augmentation
 
 torch.multiprocessing.set_sharing_strategy('file_system')   # https://github.com/pytorch/pytorch/issues/11201
 
@@ -24,6 +24,8 @@ np.random.seed(args.seed)
 
 # tokenizer
 tokenizer = MODELS[args.pretrained_model][1].from_pretrained(args.pretrained_model)
+augmentation.tokenizer = tokenizer
+augmentation.sub_style = args.sub_style
 token_style = MODELS[args.pretrained_model][3]
 ar = args.augment_rate
 sequence_len = args.sequence_length
@@ -109,6 +111,7 @@ def validate(data_loader):
     with torch.no_grad():
         for x, y, att, y_mask in tqdm(data_loader, desc='eval'):
             x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
+            y_mask = y_mask.view(-1)
             if args.use_crf:
                 y_predict = deep_punctuation(x, att, y)
                 loss = deep_punctuation.log_likelihood(x, att, y)
@@ -143,6 +146,7 @@ def test(data_loader):
     with torch.no_grad():
         for x, y, att, y_mask in tqdm(data_loader, desc='test'):
             x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
+            y_mask = y_mask.view(-1)
             if args.use_crf:
                 y_predict = deep_punctuation(x, att, y)
                 y_predict = y_predict.view(-1)
@@ -191,10 +195,11 @@ def train():
         deep_punctuation.train()
         for x, y, att, y_mask in tqdm(train_loader, desc='train'):
             x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
+            y_mask = y_mask.view(-1)
             if args.use_crf:
-                y_predict = deep_punctuation(x, att, y)
                 loss = deep_punctuation.log_likelihood(x, att, y)
-                y_predict = y_predict.view(-1)
+                # y_predict = deep_punctuation(x, att, y)
+                # y_predict = y_predict.view(-1)
                 y = y.view(-1)
             else:
                 y_predict = deep_punctuation(x, att)
@@ -202,6 +207,8 @@ def train():
                 y = y.view(-1)
                 loss = criterion(y_predict, y)
                 y_predict = torch.argmax(y_predict, dim=1).view(-1)
+
+                correct += torch.sum(y_mask * (y_predict == y).long()).item()
 
             optimizer.zero_grad()
             train_loss += loss.item()
@@ -213,7 +220,7 @@ def train():
             optimizer.step()
 
             y_mask = y_mask.view(-1)
-            correct += torch.sum(y_mask * (y_predict == y).long()).item()
+
             total += torch.sum(y_mask).item()
 
         train_loss /= train_iteration
