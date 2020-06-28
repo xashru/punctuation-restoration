@@ -22,6 +22,8 @@ def parse_arguments():
     parser.add_argument('--augment-rate', default=0., type=float, help='token change rate')
     parser.add_argument('--augment-type', default='none', type=str, help='which augmentation to use')
     parser.add_argument('--sub-style', default='unk', type=str, help='replacement strategy for substitution augment')
+    parser.add_argument('--alpha-sub', default=0.4, type=float, help='augmentation alpha for substitution')
+    parser.add_argument('--alpha-del', default=0.4, type=float, help='augmentation alpha for deletion')
     parser.add_argument('--lr', default=1e-5, type=float, help='learning rate (default: 16)')
     parser.add_argument('--decay', default=0, type=float, help='weight decay (default: 1e-5)')
     parser.add_argument('--gradient-clip', default=-1, type=float, help='gradient clipping (default: -1 i.e., none)')

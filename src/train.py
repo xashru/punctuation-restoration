@@ -26,6 +26,8 @@ np.random.seed(args.seed)
 tokenizer = MODELS[args.pretrained_model][1].from_pretrained(args.pretrained_model)
 augmentation.tokenizer = tokenizer
 augmentation.sub_style = args.sub_style
+augmentation.alpha_sub = args.alpha_sub
+augmentation.alpha_del = args.alpha_del
 token_style = MODELS[args.pretrained_model][3]
 ar = args.augment_rate
 sequence_len = args.sequence_length
