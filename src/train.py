@@ -87,8 +87,10 @@ val_loader = torch.utils.data.DataLoader(val_set, **data_loader_params)
 test_loaders = [torch.utils.data.DataLoader(x, **data_loader_params) for x in test_set]
 
 # logs
+os.makedirs(args.save_path, exist_ok=True)
 model_save_path = os.path.join(args.save_path, 'weights.pt')
 log_path = os.path.join(args.save_path, args.name + '_logs.txt')
+
 
 # Model
 device = torch.device('cuda' if (args.cuda and torch.cuda.is_available()) else 'cpu')
