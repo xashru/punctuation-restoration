@@ -9,9 +9,10 @@ def parse_data(file_path, tokenizer, sequence_len, token_style):
 
     :param file_path: text file path that contains tokens and punctuations separated by tab in lines
     :param tokenizer: tokenizer that will be used to further tokenize word for BERT like models
-    :param sequence_len: length of each sequence
+    :param sequence_len: maximum length of each sequence
     :param token_style: For getting index of special tokens in config.TOKEN_IDX
-    :return: list of [tokens_index, punctuation_index, attention_masks], each having sequence_len length
+    :return: list of [tokens_index, punctuation_index, attention_masks, punctuation_mask], each having sequence_len
+    punctuation_mask is used to ignore special indices like padding and intermediate sub-word token during evaluation
     """
     data_items = []
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -65,7 +66,7 @@ class Dataset(torch.utils.data.Dataset):
         :param tokenizer: tokenizer that will be used to further tokenize word for BERT like models
         :param sequence_len: length of each sequence
         :param token_style: For getting index of special tokens in config.TOKEN_IDX
-        :param augment_rate: token change rate when preparing data
+        :param augment_rate: token augmentation rate when preparing data
         :param is_train: if false do not apply augmentation
         """
         if isinstance(files, list):
