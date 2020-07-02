@@ -31,12 +31,12 @@ augmentation.alpha_del = args.alpha_del
 token_style = MODELS[args.pretrained_model][3]
 ar = args.augment_rate
 sequence_len = args.sequence_length
-at = args.augment_type
+aug_type = args.augment_type
 
 # Datasets
 if args.language == 'english':
     train_set = Dataset(os.path.join(args.data_path, 'en/train2012'), tokenizer=tokenizer, sequence_len=sequence_len,
-                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=at)
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type)
     val_set = Dataset(os.path.join(args.data_path, 'en/dev2012'), tokenizer=tokenizer, sequence_len=sequence_len,
                       token_style=token_style, is_train=False)
     test_set_ref = Dataset(os.path.join(args.data_path, 'en/test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
@@ -46,7 +46,7 @@ if args.language == 'english':
     test_set = [val_set, test_set_ref, test_set_asr]
 elif args.language == 'bangla':
     train_set = Dataset(os.path.join(args.data_path, 'bn/train'), tokenizer=tokenizer, sequence_len=sequence_len,
-                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=at)
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type)
     val_set = Dataset(os.path.join(args.data_path, 'bn/dev'), tokenizer=tokenizer, sequence_len=sequence_len,
                       token_style=token_style, is_train=False)
     test_set_news = Dataset(os.path.join(args.data_path, 'bn/test_news'), tokenizer=tokenizer, sequence_len=sequence_len,
@@ -59,7 +59,7 @@ elif args.language == 'bangla':
 elif args.language == 'english-bangla':
     train_set = Dataset([os.path.join(args.data_path, 'en/train2012'), os.path.join(args.data_path, 'bn/train_bn')],
                         tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=True,
-                        augment_rate=ar, augment_type=at)
+                        augment_rate=ar, augment_type=aug_type)
     val_set = Dataset([os.path.join(args.data_path, 'en/dev2012'), os.path.join(args.data_path, 'bn/dev_bn')],
                       tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=False)
     test_set_ref = Dataset(os.path.join(args.data_path, 'en/test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
@@ -80,7 +80,7 @@ else:
 data_loader_params = {
     'batch_size': args.batch_size,
     'shuffle': True,
-    'num_workers': 4
+    'num_workers': 1
 }
 train_loader = torch.utils.data.DataLoader(train_set, **data_loader_params)
 val_loader = torch.utils.data.DataLoader(val_set, **data_loader_params)
@@ -137,7 +137,7 @@ def validate(data_loader):
 
 def test(data_loader):
     """
-    :return: precision[numpy array], recall[numpy array], f1 score [numpy array], accuracy
+    :return: precision[numpy array], recall[numpy array], f1 score [numpy array], accuracy, confusion matrix
     """
     num_iteration = 0
     deep_punctuation.eval()
@@ -145,6 +145,7 @@ def test(data_loader):
     tp = np.zeros(1+len(punctuation_dict), dtype=np.int)
     fp = np.zeros(1+len(punctuation_dict), dtype=np.int)
     fn = np.zeros(1+len(punctuation_dict), dtype=np.int)
+    cm = np.zeros((len(punctuation_dict), len(punctuation_dict)), dtype=np.int)
     correct = 0
     total = 0
     with torch.no_grad():
@@ -176,6 +177,7 @@ def test(data_loader):
                 else:
                     fn[cor] += 1
                     fp[prd] += 1
+                cm[cor][prd] += 1
     # ignore first index which is for no punctuation
     tp[-1] = np.sum(tp[1:])
     fp[-1] = np.sum(fp[1:])
@@ -184,7 +186,7 @@ def test(data_loader):
     recall = tp/(tp+fn)
     f1 = 2 * precision * recall / (precision + recall)
 
-    return precision, recall, f1, correct/total
+    return precision, recall, f1, correct/total, cm
 
 
 def train():
@@ -238,7 +240,6 @@ def train():
         with open(log_path, 'a') as f:
             f.write(log + '\n')
         print(log)
-        # scheduler.step()
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             torch.save(deep_punctuation.state_dict(), model_save_path)
@@ -246,9 +247,9 @@ def train():
     print('Best validation Acc:', best_val_acc)
     deep_punctuation.load_state_dict(torch.load(model_save_path))
     for loader in test_loaders:
-        precision, recall, f1, accuracy = test(loader)
+        precision, recall, f1, accuracy, cm = test(loader)
         log = 'Precision: ' + str(precision) + '\n' + 'Recall: ' + str(recall) + '\n' + 'F1 score: ' + str(f1) + \
-              '\n' + 'Accuracy:' + str(accuracy) + '\n'
+              '\n' + 'Accuracy:' + str(accuracy) + '\n' + 'Confusion Matrix' + str(cm) + '\n'
         print(log)
         with open(log_path, 'a') as f:
             f.write(log)

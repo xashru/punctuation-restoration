@@ -11,7 +11,7 @@ def parse_arguments():
                         help='Freeze BERT layers or not')
     parser.add_argument('--lstm-dim', default=-1, type=int,
                         help='hidden dimension in LSTM layer, if -1 is set equal to hidden dimension in language model')
-    parser.add_argument('--use-crf', default=True, type=lambda x: (str(x).lower() == 'true'),
+    parser.add_argument('--use-crf', default=False, type=lambda x: (str(x).lower() == 'true'),
                         help='whether to use CRF layer or not')
     parser.add_argument('--data-path', default='data/', type=str, help='path to train/dev/test datasets')
     parser.add_argument('--language', default='english', type=str,
