@@ -49,6 +49,4 @@ MODELS = {
     'albert-base-v1': (AlbertModel, AlbertTokenizer, 768, 'albert'),
     'albert-base-v2': (AlbertModel, AlbertTokenizer, 768, 'albert'),
     'albert-large-v2': (AlbertModel, AlbertTokenizer, 1024, 'albert'),
-    'albert-xlarge-v2': (AlbertModel, AlbertTokenizer, 2048, 'albert'),
-    'albert-xxlarge-v2': (AlbertModel, AlbertTokenizer, 4096, 'albert'),
 }
