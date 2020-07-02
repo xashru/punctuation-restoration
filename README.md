@@ -58,7 +58,9 @@ xlm-roberta-large
 ```
 
 ## Test 
-To test pretrained models on processed test datasets run run following command
+Trained models can be tested on processed data using `test` module.
+
+For example, to test the best preforming English model run following command
 ```bash
 python src/test.py --pretrained-model=roberta-large --lstm-dim=-1 --use-crf=False --data-path=data/test 
 --weight-path=weights/roberta-large.pt --sequence-length=256 --save-path=out
