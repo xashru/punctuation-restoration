@@ -1,6 +1,6 @@
 # Punctuation Restoration using Transformer Models
 
-Punctuation Restoration using deep neural network for English and Bangla.
+This repository contins official implementation of the paper *Punctuation Restoration using Transformer Modelsfor High-and Low-Resource Languages* accepted at the EMNLP workshop [W-NUT 2020](http://noisy-text.github.io/2020/).
 
 
 ## Data
