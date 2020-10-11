@@ -1,6 +1,6 @@
 # Punctuation Restoration using Transformer Models
 
-This repository contins official implementation of the paper *Punctuation Restoration using Transformer Modelsfor High-and Low-Resource Languages* accepted at the EMNLP workshop [W-NUT 2020](http://noisy-text.github.io/2020/).
+This repository contins official implementation of the paper *Punctuation Restoration using Transformer Models for High-and Low-Resource Languages* accepted at the EMNLP workshop [W-NUT 2020](http://noisy-text.github.io/2020/).
 
 
 ## Data
