@@ -80,3 +80,8 @@ python src/test.py --pretrained-model=roberta-large --lstm-dim=-1 --use-crf=Fals
 ```
 Please provide corresponding arguments for `pretrained-model`, `lstm-dim`, `use-crf` that were used during training the
 model. This will run test for all data available in `data-path` directory.
+
+## Pretrained Models
+You can find pretrained mdoels for RoBERTa-large model with augmentation for English [here](https://drive.google.com/file/d/17BPcnHVhpQlsOTC8LEayIFFJ7WkL00cr/view?usp=sharing)
+XLM-RoBERTa-large model with augmentation for Bangla can be found [here](https://drive.google.com/file/d/1L_rGKSEDyntggLA-URukjjmVrdiYPLEw/view?usp=sharing)
+
