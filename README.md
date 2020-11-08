@@ -30,15 +30,15 @@ pip install -r requirements.txt
 ## Training
 To train punctuation restoration model with optimal parameter settings for English run the following command
 ```
-python src/train.py --cuda=True --pretrained-model=roberta-large --freeze-bert=False --lstm-dim=-1 --language=english --seed=1
---lr=5e-6 --epoch=10 --use-crf=False --augment-type=all  --augment-rate=0.15 --alpha-sub=0.4 --alpha-del=0.4
---data-path=data --save-path=out
+python src/train.py --cuda=True --pretrained-model=roberta-large --freeze-bert=False --lstm-dim=-1 
+--language=english --seed=1 --lr=5e-6 --epoch=10 --use-crf=False --augment-type=all  --augment-rate=0.15 
+--alpha-sub=0.4 --alpha-del=0.4 --data-path=data --save-path=out
 ```
 To train for Bangla the corresponding command is
 ```
-python src/train.py --cuda=True --pretrained-model=xlm-roberta-large --freeze-bert=False --lstm-dim=-1 --language=bangla --seed=1
---lr=5e-6 --epoch=10 --use-crf=False --augment-type=all  --augment-rate=0.15 --alpha-sub=0.4 --alpha-del=0.4
---data-path=data --save-path=out
+python src/train.py --cuda=True --pretrained-model=xlm-roberta-large --freeze-bert=False --lstm-dim=-1 
+--language=bangla --seed=1 --lr=5e-6 --epoch=10 --use-crf=False --augment-type=all  --augment-rate=0.15 
+--alpha-sub=0.4 --alpha-del=0.4 --data-path=data --save-path=out
 ```
 
 #### Supported models for English
@@ -70,8 +70,43 @@ xlm-roberta-base
 xlm-roberta-large
 ```
 
+
+## Pretrained Models
+You can find pretrained mdoels for RoBERTa-large model with augmentation for English [here](https://drive.google.com/file/d/17BPcnHVhpQlsOTC8LEayIFFJ7WkL00cr/view?usp=sharing)  
+XLM-RoBERTa-large model with augmentation for Bangla can be found [here](https://drive.google.com/file/d/1X2udyT1XYrmCNvWtFpT_6jrWsQejGCBW/view?usp=sharing)
+
+
+
+## Inference
+You can run inference on unprocessed text file to produce punctuated text using `inference` module. Note that if the 
+text already contains they are removed before inference. 
+
+Example script for English:
+```bash
+python inference.py --pretrained-model=roberta-large --weight-path=roberta-large-en.pt --language=en 
+--in-file=data/test_en.txt --out-file=data/test_en_out.txt
+```
+This should create the text file with following output:
+```text
+Tolkien drew on a wide array of influences including language, Christianity, mythology, including the Norse Völsunga saga, archaeology, especially at the Temple of Nodens, ancient and modern literature and personal experience. He was inspired primarily by his profession, philology. his work centred on the study of Old English literature, especially Beowulf, and he acknowledged its importance to his writings. 
+```
+
+Similarly, For Bangla
+```bash
+python inference.py --pretrained-model=xlm-roberta-large --weight-path=xlm-roberta-large-bn.pt --language=bn  
+--in-file=data/test_bn.txt --out-file=data/test_bn_out.txt
+```
+The expected output is
+```text
+বিংশ শতাব্দীর বাংলা মননে কাজী নজরুল ইসলামের মর্যাদা ও গুরুত্ব অপরিসীম। একাধারে কবি, সাহিত্যিক, সংগীতজ্ঞ, সাংবাদিক, সম্পাদক, রাজনীতিবিদ এবং সৈনিক হিসেবে অন্যায় ও অবিচারের বিরুদ্ধে নজরুল সর্বদাই ছিলেন সোচ্চার। তার কবিতা ও গানে এই মনোভাবই প্রতিফলিত হয়েছে। অগ্নিবীণা হাতে তার প্রবেশ, ধূমকেতুর মতো তার প্রকাশ। যেমন লেখাতে বিদ্রোহী, তেমনই জীবনে কাজেই "বিদ্রোহী কবি"। তার জন্ম ও মৃত্যুবার্ষিকী বিশেষ মর্যাদার সঙ্গে উভয় বাংলাতে প্রতি বৎসর উদযাপিত হয়ে থাকে। 
+```
+
+Please note that *Comma* includes commas, colons and dashes, *Period* includes full stops, exclamation marks 
+and semicolons and *Question* is just question marks. 
+
+
 ## Test
-Trained models can be tested on processed data using `test` module.
+Trained models can be tested on processed data using `test` module to prepare result.
 
 For example, to test the best preforming English model run following command
 ```bash
@@ -80,8 +115,3 @@ python src/test.py --pretrained-model=roberta-large --lstm-dim=-1 --use-crf=Fals
 ```
 Please provide corresponding arguments for `pretrained-model`, `lstm-dim`, `use-crf` that were used during training the
 model. This will run test for all data available in `data-path` directory.
-
-## Pretrained Models
-You can find pretrained mdoels for RoBERTa-large model with augmentation for English [here](https://drive.google.com/file/d/17BPcnHVhpQlsOTC8LEayIFFJ7WkL00cr/view?usp=sharing)  
-XLM-RoBERTa-large model with augmentation for Bangla can be found [here](https://drive.google.com/file/d/1X2udyT1XYrmCNvWtFpT_6jrWsQejGCBW/view?usp=sharing)
-
