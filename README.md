@@ -79,7 +79,7 @@ XLM-RoBERTa-large model with augmentation for Bangla can be found [here](https:/
 
 ## Inference
 You can run inference on unprocessed text file to produce punctuated text using `inference` module. Note that if the 
-text already contains they are removed before inference. 
+text already contains punctuation they are removed before inference. 
 
 Example script for English:
 ```bash
