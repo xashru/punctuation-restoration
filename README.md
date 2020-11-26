@@ -115,3 +115,22 @@ python src/test.py --pretrained-model=roberta-large --lstm-dim=-1 --use-crf=Fals
 ```
 Please provide corresponding arguments for `pretrained-model`, `lstm-dim`, `use-crf` that were used during training the
 model. This will run test for all data available in `data-path` directory.
+
+
+## Cite this work
+
+```
+@inproceedings{alam-etal-2020-punctuation,
+    title = "Punctuation Restoration using Transformer Models for High-and Low-Resource Languages",
+    author = "Alam, Tanvirul  and
+      Khan, Akib  and
+      Alam, Firoj",
+    booktitle = "Proceedings of the Sixth Workshop on Noisy User-generated Text (W-NUT 2020)",
+    month = nov,
+    year = "2020",
+    address = "Online",
+    publisher = "Association for Computational Linguistics",
+    url = "https://www.aclweb.org/anthology/2020.wnut-1.18",
+    pages = "132--142",
+}
+```
