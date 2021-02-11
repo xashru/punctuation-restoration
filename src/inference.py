@@ -77,9 +77,9 @@ def inference():
             y_mask = y_mask + [0 for _ in range(sequence_len - len(y_mask))]
         attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x]
 
-        x = torch.tensor(x)
+        x = torch.tensor(x).reshape(1,-1)
         y_mask = torch.tensor(y_mask)
-        attn_mask = torch.tensor(attn_mask)
+        attn_mask = torch.tensor(attn_mask).reshape(1,-1)
         x, attn_mask, y_mask = x.to(device), attn_mask.to(device), y_mask.to(device)
 
         with torch.no_grad():
