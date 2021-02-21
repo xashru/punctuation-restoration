@@ -49,4 +49,10 @@ MODELS = {
     'albert-base-v1': (AlbertModel, AlbertTokenizer, 768, 'albert'),
     'albert-base-v2': (AlbertModel, AlbertTokenizer, 768, 'albert'),
     'albert-large-v2': (AlbertModel, AlbertTokenizer, 1024, 'albert'),
+    'sagorsarker/bangla-bert-base': (BertModel, BertTokenizer, 768, 'bert'),
+    'neuralspace-reverie/indic-transformers-bn-distilbert': (DistilBertModel, DistilBertTokenizer, 768, 'bert'),
+    'neuralspace-reverie/indic-transformers-bn-xlmroberta': (XLMRobertaModel, XLMRobertaTokenizer, 768, 'roberta'),
+    'neuralspace-reverie/indic-transformers-bn-bert': (BertModel, BertTokenizer, 768, 'bert'),
+    'neuralspace-reverie/indic-transformers-bn-roberta': (RobertaModel, RobertaTokenizer, 768, 'roberta'),
+    'monsoon-nlp/bangla-electra': (ElectraModel, ElectraTokenizer, 256, bert)
 }
