@@ -54,5 +54,5 @@ MODELS = {
     'neuralspace-reverie/indic-transformers-bn-xlmroberta': (XLMRobertaModel, XLMRobertaTokenizer, 768, 'roberta'),
     'neuralspace-reverie/indic-transformers-bn-bert': (BertModel, BertTokenizer, 768, 'bert'),
     'neuralspace-reverie/indic-transformers-bn-roberta': (RobertaModel, RobertaTokenizer, 768, 'roberta'),
-    'monsoon-nlp/bangla-electra': (ElectraModel, ElectraTokenizer, 256, bert)
+    'monsoon-nlp/bangla-electra': (ElectraModel, ElectraTokenizer, 256, 'bert')
 }
