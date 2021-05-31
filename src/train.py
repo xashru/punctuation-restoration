@@ -5,6 +5,7 @@ import numpy as np
 from torch.utils import data
 import torch.multiprocessing
 from tqdm import tqdm
+from transformers import AutoTokenizer, AutoModel
 
 from argparser import parse_arguments
 from dataset import Dataset
@@ -23,7 +24,8 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(args.seed)
 
 # tokenizer
-tokenizer = MODELS[args.pretrained_model][1].from_pretrained(args.pretrained_model)
+#tokenizer = MODELS[args.pretrained_model][1].from_pretrained(args.pretrained_model)
+tokenizer = AutoTokenizer.from_pretrained("SZTAKI-HLT/hubert-base-cc")
 augmentation.tokenizer = tokenizer
 augmentation.sub_style = args.sub_style
 augmentation.alpha_sub = args.alpha_sub
