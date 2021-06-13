@@ -5,10 +5,12 @@ import numpy as np
 from torch.utils import data
 import torch.multiprocessing
 from tqdm import tqdm
+from scipy.stats import norm
+import sklearn.preprocessing as preprocessing
 
 from argparser import parse_arguments
 from dataset import Dataset
-from model import DeepPunctuation, DeepPunctuationCRF
+from model import DeepPunctuation
 from config import *
 import augmentation
 
@@ -24,55 +26,81 @@ np.random.seed(args.seed)
 
 # tokenizer
 tokenizer = MODELS[args.pretrained_model][1].from_pretrained(args.pretrained_model)
+
 augmentation.tokenizer = tokenizer
-augmentation.sub_style = args.sub_style
+augmentation.sub_style = args.sub_style 
 augmentation.alpha_sub = args.alpha_sub
 augmentation.alpha_del = args.alpha_del
+
 token_style = MODELS[args.pretrained_model][3]
 ar = args.augment_rate
 sequence_len = args.sequence_length
 aug_type = args.augment_type
+pre_trained_model = args.trained_model_path
+use_window = args.sliding_window
+stride_size = args.stride_size
 
 # Datasets
 if args.language == 'english':
     train_set = Dataset(os.path.join(args.data_path, 'en/train2012'), tokenizer=tokenizer, sequence_len=sequence_len,
-                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type)
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
     val_set = Dataset(os.path.join(args.data_path, 'en/dev2012'), tokenizer=tokenizer, sequence_len=sequence_len,
-                      token_style=token_style, is_train=False)
+                      token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
     test_set_ref = Dataset(os.path.join(args.data_path, 'en/test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
-                           token_style=token_style, is_train=False)
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
     test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
-                           token_style=token_style, is_train=False)
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
     test_set = [val_set, test_set_ref, test_set_asr]
-elif args.language == 'bangla':
-    train_set = Dataset(os.path.join(args.data_path, 'bn/train'), tokenizer=tokenizer, sequence_len=sequence_len,
-                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type)
-    val_set = Dataset(os.path.join(args.data_path, 'bn/dev'), tokenizer=tokenizer, sequence_len=sequence_len,
-                      token_style=token_style, is_train=False)
-    test_set_news = Dataset(os.path.join(args.data_path, 'bn/test_news'), tokenizer=tokenizer, sequence_len=sequence_len,
-                            token_style=token_style, is_train=False)
-    test_set_ref = Dataset(os.path.join(args.data_path, 'bn/test_ref'), tokenizer=tokenizer, sequence_len=sequence_len,
-                           token_style=token_style, is_train=False)
-    test_set_asr = Dataset(os.path.join(args.data_path, 'bn/test_asr'), tokenizer=tokenizer, sequence_len=sequence_len,
-                           token_style=token_style, is_train=False)
-    test_set = [val_set, test_set_news, test_set_ref, test_set_asr]
-elif args.language == 'english-bangla':
-    train_set = Dataset([os.path.join(args.data_path, 'en/train2012'), os.path.join(args.data_path, 'bn/train_bn')],
-                        tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=True,
-                        augment_rate=ar, augment_type=aug_type)
-    val_set = Dataset([os.path.join(args.data_path, 'en/dev2012'), os.path.join(args.data_path, 'bn/dev_bn')],
-                      tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=False)
+elif args.language == 'mini-english':
+    train_set = Dataset([os.path.join(args.data_path, 'utt/train_utt'), os.path.join(args.data_path, 'en/train_ted_talk_20%')], tokenizer=tokenizer, sequence_len=sequence_len,
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
+    val_set = Dataset(os.path.join(args.data_path, 'en/dev2012'), tokenizer=tokenizer, sequence_len=sequence_len,
+                      token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
     test_set_ref = Dataset(os.path.join(args.data_path, 'en/test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
-                           token_style=token_style, is_train=False)
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
     test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
-                           token_style=token_style, is_train=False)
-    test_set_news = Dataset(os.path.join(args.data_path, 'bn/test_news'), tokenizer=tokenizer, sequence_len=sequence_len,
-                            token_style=token_style, is_train=False)
-    test_bn_ref = Dataset(os.path.join(args.data_path, 'bn/test_ref'), tokenizer=tokenizer, sequence_len=sequence_len,
-                          token_style=token_style, is_train=False)
-    test_bn_asr = Dataset(os.path.join(args.data_path, 'bn/test_asr'), tokenizer=tokenizer, sequence_len=sequence_len,
-                          token_style=token_style, is_train=False)
-    test_set = [val_set, test_set_ref, test_set_asr, test_set_news, test_bn_ref, test_bn_asr]
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set = [val_set, test_set_ref, test_set_asr]
+elif args.language == 'mixed-LJ-speech':
+    train_set = Dataset([os.path.join(args.data_path, 'utt/train_utt'), os.path.join(args.data_path, 'LJ_Speech/non_fiction_20%')], tokenizer=tokenizer, sequence_len=sequence_len,
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
+    val_set = Dataset(os.path.join(args.data_path, 'LJ_Speech/non_fiction_80%'), tokenizer=tokenizer, sequence_len=sequence_len,
+                      token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set_ref = Dataset(os.path.join(args.data_path, 'en/test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set = [val_set, test_set_ref, test_set_asr]
+elif args.language == 'utt':
+    train_set = Dataset(os.path.join(args.data_path, 'utt/train_utt'), tokenizer=tokenizer, sequence_len=sequence_len,
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
+    val_set = Dataset(os.path.join(args.data_path, 'utt/dev_utt'), tokenizer=tokenizer, sequence_len=sequence_len,
+                      token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set_ref = Dataset(os.path.join(args.data_path, 'utt/test_utt'), tokenizer=tokenizer, sequence_len=sequence_len,
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set = [val_set, test_set_ref, test_set_asr]
+elif args.language == 'en_utt':
+    train_set = Dataset([os.path.join(args.data_path, 'en/train2012'), os.path.join(args.data_path, 'utt/train_utt')], tokenizer=tokenizer, sequence_len=sequence_len,
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
+    val_set = Dataset([os.path.join(args.data_path, 'en/dev2012'), os.path.join(args.data_path, 'utt/dev_utt')], tokenizer=tokenizer, sequence_len=sequence_len,
+                      token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set_ref = Dataset(os.path.join(args.data_path, 'en/test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set_utt = Dataset(os.path.join(args.data_path, 'utt/test_utt'), tokenizer=tokenizer, sequence_len=sequence_len,
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set = [val_set, test_set_ref, test_set_asr, test_set_utt]
+elif args.language == 'test':
+    train_set = Dataset(os.path.join(args.data_path, 'en/test2011 copy'), tokenizer=tokenizer, sequence_len=sequence_len,
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
+    # val_set = Dataset(os.path.join(args.data_path, 'en/dev2012 copy'), tokenizer=tokenizer, sequence_len=sequence_len,
+    #                   token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    # test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr copy'), tokenizer=tokenizer, sequence_len=sequence_len,
+    #                        token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    # test_set = [val_set, test_set_asr]
 else:
     raise ValueError('Incorrect language argument for Dataset')
 
@@ -88,17 +116,22 @@ test_loaders = [torch.utils.data.DataLoader(x, **data_loader_params) for x in te
 
 # logs
 os.makedirs(args.save_path, exist_ok=True)
-model_save_path = os.path.join(args.save_path, 'weights.pt')
-log_path = os.path.join(args.save_path, args.name + '_logs.txt')
+model_save_path = os.path.join(args.save_path.strip(), args.pretrained_model + '.pt')
+log_path = os.path.join(args.save_path.strip(), args.pretrained_model + '.txt')
 
 
 # Model
 device = torch.device('cuda' if (args.cuda and torch.cuda.is_available()) else 'cpu')
-if args.use_crf:
-    deep_punctuation = DeepPunctuationCRF(args.pretrained_model, freeze_bert=args.freeze_bert, lstm_dim=args.lstm_dim)
-else:
-    deep_punctuation = DeepPunctuation(args.pretrained_model, freeze_bert=args.freeze_bert, lstm_dim=args.lstm_dim)
+deep_punctuation = DeepPunctuation(args.pretrained_model, freeze_bert=args.freeze_bert, lstm_dim=args.lstm_dim)
 deep_punctuation.to(device)
+
+#load previous model
+if (args.trained_model_path != False):
+    pretrained_model = os.path.join(args.trained_model_path.strip(), args.pretrained_model + '.pt')
+    print('loading from ', pretrained_model)
+    deep_punctuation.load_state_dict(torch.load(pretrained_model))
+
+# print(deep_punctuation)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(deep_punctuation.parameters(), lr=args.lr, weight_decay=args.decay)
 
@@ -116,32 +149,37 @@ def validate(data_loader):
         for x, y, att, y_mask in tqdm(data_loader, desc='eval'):
             x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
             y_mask = y_mask.view(-1)
-            if args.use_crf:
-                y_predict = deep_punctuation(x, att, y)
-                loss = deep_punctuation.log_likelihood(x, att, y)
-                y_predict = y_predict.view(-1)
-                y = y.view(-1)
-            else:
-                y_predict = deep_punctuation(x, att)
-                y = y.view(-1)
-                y_predict = y_predict.view(-1, y_predict.shape[2])
-                loss = criterion(y_predict, y)
-                y_predict = torch.argmax(y_predict, dim=1).view(-1)
+            y_predict = deep_punctuation(x, att)
+            y = y.view(-1)
+            
+            # reduce end weights of sequences
+            if use_window:
+                x_values = np.linspace(-3, 3, y_predict.shape[1])                   # get x values uniformly 
+                pdf_values = norm.pdf(x_values)                                     # get pdf values of a normal distribution
+                pdf_values = pdf_values.reshape(-1,1)            
+                min_max_scaler = preprocessing.MinMaxScaler((0.2,1))                # get weights to multiply to tensor between 0.2 to 1
+                bellcurve_weights = min_max_scaler.fit_transform(pdf_values)
+                bellcurve_weights = torch.from_numpy(bellcurve_weights).to(device)
+                y_predict = y_predict * bellcurve_weights
+
+            y_predict = y_predict.view(-1, y_predict.shape[2])
+            loss = criterion(y_predict, y)
+            y_predict = torch.argmax(y_predict, dim=1).view(-1)
+
             val_loss += loss.item()
             num_iteration += 1
             y_mask = y_mask.view(-1)
             correct += torch.sum(y_mask * (y_predict == y).long()).item()
             total += torch.sum(y_mask).item()
     return correct/total, val_loss/num_iteration
-
-
+    
 def test(data_loader):
     """
     :return: precision[numpy array], recall[numpy array], f1 score [numpy array], accuracy, confusion matrix
     """
     num_iteration = 0
     deep_punctuation.eval()
-    # +1 for overall result
+    # initialize true positive, false positive arrays... for [O, COMMA, PERIOD, QUESTION, OVERALL]
     tp = np.zeros(1+len(punctuation_dict), dtype=np.int)
     fp = np.zeros(1+len(punctuation_dict), dtype=np.int)
     fn = np.zeros(1+len(punctuation_dict), dtype=np.int)
@@ -152,19 +190,27 @@ def test(data_loader):
         for x, y, att, y_mask in tqdm(data_loader, desc='test'):
             x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
             y_mask = y_mask.view(-1)
-            if args.use_crf:
-                y_predict = deep_punctuation(x, att, y)
-                y_predict = y_predict.view(-1)
-                y = y.view(-1)
-            else:
-                y_predict = deep_punctuation(x, att)
-                y = y.view(-1)
-                y_predict = y_predict.view(-1, y_predict.shape[2])
-                y_predict = torch.argmax(y_predict, dim=1).view(-1)
+            y_predict = deep_punctuation(x, att)                                    #make prediction using model
+            y = y.view(-1)
+
+            # reduce end weights of sequences
+            if use_window:
+                x_values = np.linspace(-3, 3, y_predict.shape[1])                   # get x values uniformly 
+                pdf_values = norm.pdf(x_values)                                     # get pdf values of a normal distribution
+                pdf_values = pdf_values.reshape(-1,1)        
+                min_max_scaler = preprocessing.MinMaxScaler((0.2,1))                # get weights to multiply to tensor between 0.2 to 1
+                bellcurve_weights = min_max_scaler.fit_transform(pdf_values)
+                bellcurve_weights = torch.from_numpy(bellcurve_weights).to(device)
+                y_predict = y_predict * bellcurve_weights
+
+            y_predict = y_predict.view(-1, y_predict.shape[2])
+            y_predict = torch.argmax(y_predict, dim=1).view(-1)
+
             num_iteration += 1
             y_mask = y_mask.view(-1)
             correct += torch.sum(y_mask * (y_predict == y).long()).item()
             total += torch.sum(y_mask).item()
+            # print('y_shape: ', y.shape)
             for i in range(y.shape[0]):
                 if y_mask[i] == 0:
                     # we can ignore this because we know there won't be any punctuation in this position
@@ -173,48 +219,63 @@ def test(data_loader):
                 cor = y[i]
                 prd = y_predict[i]
                 if cor == prd:
-                    tp[cor] += 1
+                    tp[cor] += 1    #increase true positive count
                 else:
-                    fn[cor] += 1
-                    fp[prd] += 1
-                cm[cor][prd] += 1
+                    fn[cor] += 1    #increase false negative for ground truth
+                    fp[prd] += 1    #increase false positive for prediction
+                cm[cor][prd] += 1   #increase confusion matrix
     # ignore first index which is for no punctuation
+    # calculate overall punctuations
     tp[-1] = np.sum(tp[1:])
     fp[-1] = np.sum(fp[1:])
     fn[-1] = np.sum(fn[1:])
+    # print(tp, fp, fn)
     precision = tp/(tp+fp)
+    # print(precision)
     recall = tp/(tp+fn)
     f1 = 2 * precision * recall / (precision + recall)
 
     return precision, recall, f1, correct/total, cm
 
-
 def train():
     with open(log_path, 'a') as f:
         f.write(str(args)+'\n')
     best_val_acc = 0
+
     for epoch in range(args.epoch):
+    # for epoch in range(1):  # for inspecting
+        # print('epoch: ', epoch)
         train_loss = 0.0
         train_iteration = 0
         correct = 0
         total = 0
         deep_punctuation.train()
         for x, y, att, y_mask in tqdm(train_loader, desc='train'):
+            print("\nx:", x)
             x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
             y_mask = y_mask.view(-1)
-            if args.use_crf:
-                loss = deep_punctuation.log_likelihood(x, att, y)
-                # y_predict = deep_punctuation(x, att, y)
-                # y_predict = y_predict.view(-1)
-                y = y.view(-1)
-            else:
-                y_predict = deep_punctuation(x, att)
-                y_predict = y_predict.view(-1, y_predict.shape[2])
-                y = y.view(-1)
-                loss = criterion(y_predict, y)
-                y_predict = torch.argmax(y_predict, dim=1).view(-1)
+            y_predict = deep_punctuation(x, att)
+            # print("\ny predict:", y_predict)
 
-                correct += torch.sum(y_mask * (y_predict == y).long()).item()
+            # reduce end weights of sequences
+            if use_window:
+                x_values = np.linspace(-3, 3, y_predict.shape[1])                   # get x values uniformly 
+                # print('\nbellcurve x values:\n', x_values)
+                pdf_values = norm.pdf(x_values)                                     # get pdf values of a normal distribution
+                pdf_values = pdf_values.reshape(-1,1)       
+                # print('\nbellcurve y values:\n', pdf_values)
+                min_max_scaler = preprocessing.MinMaxScaler((0.2,1))                # get weights to multiply to tensor between 0.2 to 1
+                bellcurve_weights = min_max_scaler.fit_transform(pdf_values)
+                bellcurve_weights = torch.from_numpy(bellcurve_weights).to(device)
+                # print('\nbellcurve y values normalized:\n', bellcurve_weights)
+                y_predict = y_predict * bellcurve_weights
+                # print('\ny_predict:\n', y_predict)
+            y_predict = y_predict.view(-1, y_predict.shape[2])
+            y = y.view(-1)
+
+            loss = criterion(y_predict, y)
+            y_predict = torch.argmax(y_predict, dim=1).view(-1)
+            correct += torch.sum(y_mask * (y_predict == y).long()).item()
 
             optimizer.zero_grad()
             train_loss += loss.item()

@@ -11,8 +11,6 @@ def parse_arguments():
                         help='Freeze BERT layers or not')
     parser.add_argument('--lstm-dim', default=-1, type=int,
                         help='hidden dimension in LSTM layer, if -1 is set equal to hidden dimension in language model')
-    parser.add_argument('--use-crf', default=False, type=lambda x: (str(x).lower() == 'true'),
-                        help='whether to use CRF layer or not')
     parser.add_argument('--data-path', default='data/', type=str, help='path to train/dev/test datasets')
     parser.add_argument('--language', default='english', type=str,
                         help='language, available options are english, bangla, english-bangla (for training with both)')
@@ -29,6 +27,9 @@ def parse_arguments():
     parser.add_argument('--batch-size', default=8, type=int, help='batch size (default: 8)')
     parser.add_argument('--epoch', default=10, type=int, help='total epochs (default: 10)')
     parser.add_argument('--save-path', default='out/', type=str, help='model and log save directory')
+    parser.add_argument('--trained-model-path', default=False, type=str, help='load existing model')
+    parser.add_argument('--sliding-window', default=False, type=lambda x: (str(x).lower() == 'true'), help='use sliding window implementation')
+    parser.add_argument('--stride_size', default=0.5, type=float, help='new sequence at every stride')
 
     args = parser.parse_args()
     return args

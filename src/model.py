@@ -33,26 +33,3 @@ class DeepPunctuation(nn.Module):
         x = torch.transpose(x, 0, 1)
         x = self.linear(x)
         return x
-
-
-class DeepPunctuationCRF(nn.Module):
-    def __init__(self, pretrained_model, freeze_bert=False, lstm_dim=-1):
-        super(DeepPunctuationCRF, self).__init__()
-        self.bert_lstm = DeepPunctuation(pretrained_model, freeze_bert, lstm_dim)
-        self.crf = CRF(len(punctuation_dict), batch_first=True)
-
-    def log_likelihood(self, x, attn_masks, y):
-        x = self.bert_lstm(x, attn_masks)
-        attn_masks = attn_masks.byte()
-        return -self.crf(x, y, mask=attn_masks, reduction='token_mean')
-
-    def forward(self, x, attn_masks, y):
-        if len(x.shape) == 1:
-            x = x.view(1, x.shape[0])  # add dummy batch for single sample
-        x = self.bert_lstm(x, attn_masks)
-        attn_masks = attn_masks.byte()
-        dec_out = self.crf.decode(x, mask=attn_masks)
-        y_pred = torch.zeros(y.shape).long().to(y.device)
-        for i in range(len(dec_out)):
-            y_pred[i, :len(dec_out[i])] = torch.tensor(dec_out[i]).to(y.device)
-        return y_pred

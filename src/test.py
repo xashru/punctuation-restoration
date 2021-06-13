@@ -2,10 +2,12 @@ import os
 import torch
 from tqdm import tqdm
 import numpy as np
+from scipy.stats import norm
+import sklearn.preprocessing as preprocessing
 
 import argparse
 from dataset import Dataset
-from model import DeepPunctuation, DeepPunctuationCRF
+from model import DeepPunctuation
 from config import *
 
 
@@ -14,14 +16,14 @@ parser.add_argument('--cuda', default=True, type=lambda x: (str(x).lower() == 't
 parser.add_argument('--pretrained-model', default='roberta-large', type=str, help='pretrained language model')
 parser.add_argument('--lstm-dim', default=-1, type=int,
                     help='hidden dimension in LSTM layer, if -1 is set equal to hidden dimension in language model')
-parser.add_argument('--use-crf', default=False, type=lambda x: (str(x).lower() == 'true'),
-                    help='whether to use CRF layer or not')
 parser.add_argument('--data-path', default='data/test', type=str, help='path to test datasets')
-parser.add_argument('--weight-path', default='out/weights.pt', type=str, help='model weight path')
+parser.add_argument('--weight-path', type=str, help='model weight path')
 parser.add_argument('--sequence-length', default=256, type=int,
                     help='sequence length to use when preparing dataset (default 256)')
 parser.add_argument('--batch-size', default=8, type=int, help='batch size (default: 8)')
-parser.add_argument('--save-path', default='out/', type=str, help='model and log save directory')
+parser.add_argument('--save-path', default='results/', type=str, help='model and log save directory')
+parser.add_argument('--sliding-window', default=False, type=lambda x: (str(x).lower() == 'true'), help='use sliding window implementation')
+parser.add_argument('--stride_size', default=0.5, type=float, help='new sequence at every stride')
 
 args = parser.parse_args()
 
@@ -32,9 +34,10 @@ token_style = MODELS[args.pretrained_model][3]
 
 test_files = os.listdir(args.data_path)
 test_set = []
+
 for file in test_files:
     test_set.append(Dataset(os.path.join(args.data_path, file), tokenizer=tokenizer, sequence_len=args.sequence_length,
-                            token_style=token_style, is_train=False))
+                            token_style=token_style, is_train=False, is_sliding_window=args.sliding_window, stride_size=args.stride_size))
 
 # Data Loaders
 data_loader_params = {
@@ -46,15 +49,12 @@ data_loader_params = {
 test_loaders = [torch.utils.data.DataLoader(x, **data_loader_params) for x in test_set]
 
 # logs
-model_save_path = args.weight_path
-log_path = os.path.join(args.save_path, 'logs_test.txt')
+model_save_path = os.path.join(args.weight_path.strip(), args.pretrained_model + '.pt')
+log_path = os.path.join(args.save_path.strip(), args.pretrained_model + '_test_logs.txt')
 
 # Model
 device = torch.device('cuda' if (args.cuda and torch.cuda.is_available()) else 'cpu')
-if args.use_crf:
-    deep_punctuation = DeepPunctuationCRF(args.pretrained_model, freeze_bert=False, lstm_dim=args.lstm_dim)
-else:
-    deep_punctuation = DeepPunctuation(args.pretrained_model, freeze_bert=False, lstm_dim=args.lstm_dim)
+deep_punctuation = DeepPunctuation(args.pretrained_model, freeze_bert=False, lstm_dim=args.lstm_dim)
 deep_punctuation.to(device)
 
 
@@ -75,15 +75,22 @@ def test(data_loader):
         for x, y, att, y_mask in tqdm(data_loader, desc='test'):
             x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
             y_mask = y_mask.view(-1)
-            if args.use_crf:
-                y_predict = deep_punctuation(x, att, y)
-                y_predict = y_predict.view(-1)
-                y = y.view(-1)
-            else:
-                y_predict = deep_punctuation(x, att)
-                y = y.view(-1)
-                y_predict = y_predict.view(-1, y_predict.shape[2])
-                y_predict = torch.argmax(y_predict, dim=1).view(-1)
+            y_predict = deep_punctuation(x, att)
+            y = y.view(-1)
+
+            # reduce end weights of sequences
+            if args.sliding_window:
+                x_values = np.linspace(-3, 3, y_predict.shape[1])                   # get x values uniformly 
+                pdf_values = norm.pdf(x_values)                                     # get pdf values of a normal distribution
+                pdf_values = pdf_values.reshape(-1,1)        
+                min_max_scaler = preprocessing.MinMaxScaler((0.2,1))                # get weights to multiply to tensor between 0.2 to 1
+                bellcurve_weights = min_max_scaler.fit_transform(pdf_values)
+                bellcurve_weights = torch.from_numpy(bellcurve_weights).to(device)
+                y_predict = y_predict * bellcurve_weights
+
+            y_predict = y_predict.view(-1, y_predict.shape[2])
+            y_predict = torch.argmax(y_predict, dim=1).view(-1)
+
             num_iteration += 1
             y_mask = y_mask.view(-1)
             correct += torch.sum(y_mask * (y_predict == y).long()).item()

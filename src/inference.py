@@ -2,7 +2,7 @@ import re
 import torch
 
 import argparse
-from model import DeepPunctuation, DeepPunctuationCRF
+from model import DeepPunctuation
 from config import *
 
 parser = argparse.ArgumentParser(description='Punctuation restoration inference on text file')
@@ -30,10 +30,7 @@ model_save_path = args.weight_path
 
 # Model
 device = torch.device('cuda' if (args.cuda and torch.cuda.is_available()) else 'cpu')
-if args.use_crf:
-    deep_punctuation = DeepPunctuationCRF(args.pretrained_model, freeze_bert=False, lstm_dim=args.lstm_dim)
-else:
-    deep_punctuation = DeepPunctuation(args.pretrained_model, freeze_bert=False, lstm_dim=args.lstm_dim)
+deep_punctuation = DeepPunctuation(args.pretrained_model, freeze_bert=False, lstm_dim=args.lstm_dim)
 deep_punctuation.to(device)
 
 
