@@ -75,10 +75,12 @@ def parse_data_by_block(file_path, tokenizer, sequence_len, token_style, stride_
 
     process_at_index = 0
     while (len(lines[process_at_index:]) > 0):
-        data_items += sliding_window(lines[process_at_index:process_at_index + 1000], tokenizer, sequence_len, token_style, stride_size)
-        process_at_index += 1000
+        data_items += sliding_window(lines[process_at_index:process_at_index + WORD_BATCH], tokenizer, sequence_len, token_style, stride_size)
+        process_at_index += WORD_BATCH
     
-    # print('parse by block:', data_items)
+    # print('\nsequences:')
+    # for i in data_items:
+    #     print(i[0])
     return data_items
 
 def sliding_window(line_block, tokenizer, sequence_len, token_style, stride_size):
@@ -94,13 +96,11 @@ def sliding_window(line_block, tokenizer, sequence_len, token_style, stride_size
     data_items = []
     lines = line_block
     
-    # print(lines)
     words = list(map(split_word, lines))
     words = list(map(lambda x: [tokenizer.convert_tokens_to_ids(tokenizer.tokenize(x[0].lower())), x[1]], words))   # tokenize word inputs
-    words = list(map(lambda x: [x[0], [0] * (len(x[0]) - 1) + [punctuation_dict[x[1]]]], words))            # get y list
-    words = list(map(lambda x: [fill_unknown(x[0], token_style), x[1]], words))                             # fill empty tokens
-    words = list(map(lambda x: [x[0], x[1], [0] * (len(x[0]) - 1) + [1]], words))                           # fill y_mask
-    # print(words)
+    words = list(map(lambda x: [x[0], [0] * (len(x[0]) - 1) + [punctuation_dict[x[1]]]], words))                    # get y list
+    words = list(map(lambda x: [fill_unknown(x[0], token_style), x[1]], words))                                     # fill empty tokens
+    words = list(map(lambda x: [x[0], x[1], [0] * (len(x[0]) - 1) + [1]], words))                                   # fill y_mask
 
     full_tokens = []
     full_y = []
@@ -110,7 +110,7 @@ def sliding_window(line_block, tokenizer, sequence_len, token_style, stride_size
         full_y += y
         full_y_mask += y_mask
 
-    print('\nfull tokens:', full_tokens, sep='\n')
+    # print('\nfull tokens:', full_tokens, sep='\n')
     
     process_at_index = 0
     
@@ -147,9 +147,11 @@ def sliding_window(line_block, tokenizer, sequence_len, token_style, stride_size
         attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x]
         data_items.append([x, y, attn_mask, y_mask])
         
-    print('\nsequences:')
-    for i in data_items:
-        print(i[0])
+
+    data_items = list(map(lambda x: x + [1] if x == data_items[-1] else x + [0], data_items))
+    # print('\nsequences:')
+    # for i in data_items:
+    #     print(i)
     return data_items
 
 def split_word(x):
@@ -225,6 +227,7 @@ class Dataset(torch.utils.data.Dataset):
         y = self.data[index][1]
         attn_mask = self.data[index][2]
         y_mask = self.data[index][3]
+        seq_count_in_block = self.data[index][4]
 
         if self.is_train and self.augment_rate > 0:
             x, y, attn_mask, y_mask = self._augment(x, y, y_mask)
@@ -234,21 +237,21 @@ class Dataset(torch.utils.data.Dataset):
         attn_mask = torch.tensor(attn_mask)
         y_mask = torch.tensor(y_mask)
 
-        return x, y, attn_mask, y_mask
+        return x, y, attn_mask, y_mask, seq_count_in_block
 
 # For inspection and debugging dataset.py
-args = parse_arguments()
-tokenizer = MODELS[args.pretrained_model][1].from_pretrained(args.pretrained_model)
-token_style = MODELS[args.pretrained_model][3]
-ar = 0.40
-sequence_len = 20
-aug_type = args.augment_type
-use_window = True
-stride_size = 0.5
+# args = parse_arguments()
+# tokenizer = MODELS[args.pretrained_model][1].from_pretrained(args.pretrained_model)
+# token_style = MODELS[args.pretrained_model][3]
+# ar = 0.40
+# sequence_len = 20
+# aug_type = args.augment_type
+# use_window = True
+# stride_size = 0.5
 
-Dataset('data/en/test2011 copy', 
-       tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=True, 
-       augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
+# Dataset('data/en/test2011 copy', 
+#        tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=True, 
+#        augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
 # Dataset('data/en/no_sentence_test', 
 #        tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type)
 # Dataset('data/LJ_Speech/non_fiction_20%', 

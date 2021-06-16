@@ -31,6 +31,8 @@ TOKEN_IDX = {
 # 'O' -> No punctuation
 punctuation_dict = {'O': 0, 'COMMA': 1, 'PERIOD': 2, 'QUESTION': 3}
 
+# continuous word blocks given at input
+WORD_BATCH = 1000
 
 # pretrained model name: (model class, model tokenizer, output dimension, token style)
 MODELS = {

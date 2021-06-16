@@ -51,7 +51,7 @@ if args.language == 'english':
     test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
     test_set = [val_set, test_set_ref, test_set_asr]
-elif args.language == 'mini-english':
+elif args.language == 'utt_with_20%_ted_talk':
     train_set = Dataset([os.path.join(args.data_path, 'utt/train_utt'), os.path.join(args.data_path, 'en/train_ted_talk_20%')], tokenizer=tokenizer, sequence_len=sequence_len,
                         token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
     val_set = Dataset(os.path.join(args.data_path, 'en/dev2012'), tokenizer=tokenizer, sequence_len=sequence_len,
@@ -61,8 +61,8 @@ elif args.language == 'mini-english':
     test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
     test_set = [val_set, test_set_ref, test_set_asr]
-elif args.language == 'mixed-LJ-speech':
-    train_set = Dataset([os.path.join(args.data_path, 'utt/train_utt'), os.path.join(args.data_path, 'LJ_Speech/non_fiction_20%')], tokenizer=tokenizer, sequence_len=sequence_len,
+elif args.language == 'utt_with_20%_LJ_speech':
+    train_set = Dataset([os.path.join(args.data_path, 'utt/train_utt'), os.path.join(args.data_path, 'LJ_Speech/train_LJ_Speech_20%')], tokenizer=tokenizer, sequence_len=sequence_len,
                         token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
     val_set = Dataset(os.path.join(args.data_path, 'LJ_Speech/non_fiction_80%'), tokenizer=tokenizer, sequence_len=sequence_len,
                       token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
@@ -96,11 +96,11 @@ elif args.language == 'en_utt':
 elif args.language == 'test':
     train_set = Dataset(os.path.join(args.data_path, 'en/test2011 copy'), tokenizer=tokenizer, sequence_len=sequence_len,
                         token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
-    # val_set = Dataset(os.path.join(args.data_path, 'en/dev2012 copy'), tokenizer=tokenizer, sequence_len=sequence_len,
-    #                   token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
-    # test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr copy'), tokenizer=tokenizer, sequence_len=sequence_len,
-    #                        token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
-    # test_set = [val_set, test_set_asr]
+    val_set = Dataset(os.path.join(args.data_path, 'en/dev2012 copy'), tokenizer=tokenizer, sequence_len=sequence_len,
+                      token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr copy'), tokenizer=tokenizer, sequence_len=sequence_len,
+                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set = [val_set, test_set_asr]
 else:
     raise ValueError('Incorrect language argument for Dataset')
 
@@ -110,9 +110,15 @@ data_loader_params = {
     'shuffle': True,
     'num_workers': 1
 }
+
+test_loader_params = {
+    'batch_size': args.batch_size,
+    'shuffle': False,
+    'num_workers': 1
+}
 train_loader = torch.utils.data.DataLoader(train_set, **data_loader_params)
-val_loader = torch.utils.data.DataLoader(val_set, **data_loader_params)
-test_loaders = [torch.utils.data.DataLoader(x, **data_loader_params) for x in test_set]
+val_loader = torch.utils.data.DataLoader(val_set, **test_loader_params)
+test_loaders = [torch.utils.data.DataLoader(x, **test_loader_params) for x in test_set]
 
 # logs
 os.makedirs(args.save_path, exist_ok=True)
@@ -135,6 +141,78 @@ if (args.trained_model_path != False):
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(deep_punctuation.parameters(), lr=args.lr, weight_decay=args.decay)
 
+def sum_overlapping(x, buffer_sequence, to_be_processed, seq_count_in_block):
+    #################### sum up overlapping sequences ####################
+
+    # truncate all first and last token
+    x = x[:, 1:-1]
+    assert x.shape[1] % 2 == 0, 'sequence length should be an even number'
+    
+    # split into first half and second half of sequence 
+    x = x.reshape(x.shape[0], 2, -1)
+    
+    # handle sequence in buffer from previous batch
+    if to_be_processed:
+        # print("Added buffer sequence from previous\n")
+        x[0][0] += buffer_sequence
+
+    # buffer the second half of last sequence for next batch
+    if seq_count_in_block[-1] == 0:     # needs to be added to next batch
+        buffer_sequence = x[-1][-1]
+        # print('buffered: ', x[-1][-1])
+        to_be_processed = True
+    elif seq_count_in_block[-1] == 1:   # last sequence is end of word block
+        to_be_processed = False
+
+    
+    # add all second half to next first half (exclude end of block and last seq)
+
+    # get all relevant second halves
+    sum_of_seq = x
+    exclude_first_half = torch.ones(x.shape[0])
+    second_half_mask = torch.clone(seq_count_in_block)
+    to_restore = False
+    if 1 in second_half_mask[:-1]:
+        end_block_index = (second_half_mask == 1).nonzero().item()
+        to_restore = True
+
+    second_half_mask[-1] = 1
+    second_half_mask = torch.column_stack((exclude_first_half, second_half_mask))
+    second_half_mask = second_half_mask.unsqueeze(-1)
+    sum_of_seq = torch.masked_select(sum_of_seq, second_half_mask == 0)
+    sum_of_seq = sum_of_seq.reshape(-1, 1, x.shape[2])
+
+    
+    # append zeros at the start to account for removed tensors
+    sum_of_seq = torch.cat((sum_of_seq, torch.zeros(sum_of_seq.shape[0], 1, sum_of_seq.shape[2])), 1)
+    if to_restore:
+        sum_of_seq = torch.cat((sum_of_seq[:end_block_index], torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]), sum_of_seq[end_block_index:]))
+    
+    sum_of_seq = torch.cat((torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]), sum_of_seq))
+
+    x = x + sum_of_seq
+
+    # get all first half + end of word batches as final output
+    include_first_half = torch.ones(x.shape[0])
+    seq_mask = torch.clone(seq_count_in_block)
+    seq_mask = torch.column_stack((include_first_half, seq_mask))
+    seq_mask = seq_mask.unsqueeze(-1)
+    x = torch.masked_select(x, seq_mask == 1)
+
+    return x, buffer_sequence, to_be_processed
+
+def get_merged_values(y, seq_count_in_block):
+    y = y[:, 1:-1]
+    y = y.reshape(y.shape[0], 2, -1)
+
+    # get all first half + end of word batches as final output
+    include_first_half = torch.ones(y.shape[0])
+    seq_mask = torch.clone(seq_count_in_block)
+    seq_mask = torch.column_stack((include_first_half, seq_mask))
+    seq_mask = seq_mask.unsqueeze(-1)
+    y = torch.masked_select(y, seq_mask == 1)
+
+    return y
 
 def validate(data_loader):
     """
@@ -146,23 +224,53 @@ def validate(data_loader):
     total = 0
     val_loss = 0
     with torch.no_grad():
-        for x, y, att, y_mask in tqdm(data_loader, desc='eval'):
-            x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
-            y_mask = y_mask.view(-1)
+        # save buffer sequence from previous batch
+        x_buffer = torch.empty(0)
+        y_predict_buffer = torch.empty(0)
+        y_mask_buffer = torch.empty(0)
+        x_to_be_processed = False
+        y_predict_to_be_processed = False
+        y_mask_to_be_processed = False
+
+        for x, y, att, y_mask, seq_count_in_block in tqdm(data_loader, desc='eval'):
+            # print(x.shape, y.shape, att.shape, y_mask.shape)
+            x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)            
             y_predict = deep_punctuation(x, att)
-            y = y.view(-1)
-            
+
             # reduce end weights of sequences
             if use_window:
-                x_values = np.linspace(-3, 3, y_predict.shape[1])                   # get x values uniformly 
-                pdf_values = norm.pdf(x_values)                                     # get pdf values of a normal distribution
-                pdf_values = pdf_values.reshape(-1,1)            
-                min_max_scaler = preprocessing.MinMaxScaler((0.2,1))                # get weights to multiply to tensor between 0.2 to 1
-                bellcurve_weights = min_max_scaler.fit_transform(pdf_values)
-                bellcurve_weights = torch.from_numpy(bellcurve_weights).to(device)
-                y_predict = y_predict * bellcurve_weights
+                if (sequence_len % 2 == 0):
+                    middle_index = sequence_len // 2
+                    left_weights = np.linspace(0.5, 1, middle_index)
+                    weights = np.append(left_weights, np.flip(left_weights))
+                    weights = weights.reshape(-1, 1)
+                elif (sequence_len % 2 != 0):
+                    middle_index = (sequence_len // 2) + 1
+                    left_weights = np.linspace(0.5, 1, middle_index)
+                    weights = np.append(left_weights, np.flip(left_weights[:-1]))
+                    weights = weights.reshape(-1, 1)
+                weighted_window = torch.from_numpy(weights).to(device)
+                y_predict = y_predict * weighted_window
+                
+            x, x_buffer, x_to_be_processed = sum_overlapping(x, x_buffer, x_to_be_processed, seq_count_in_block)
+            y_predict, y_predict_buffer, y_predict_to_be_processed = sum_overlapping(y_predict, y_predict_buffer, y_predict_to_be_processed, seq_count_in_block)
+            y = get_merged_values(y, seq_count_in_block)
+            y_mask, y_mask_buffer, y_mask_to_be_processed = sum_overlapping(y_mask, y_mask_buffer, y_mask_to_be_processed, seq_count_in_block)
 
-            y_predict = y_predict.view(-1, y_predict.shape[2])
+            y_predict = y_predict.view(-1, 4)
+            y = y.long()
+
+            # remove start, end, pad tokens for loss function
+            start_token = TOKEN_IDX[token_style]['START_SEQ']
+            end_token = TOKEN_IDX[token_style]['END_SEQ']
+            pad_token = TOKEN_IDX[token_style]['PAD']
+            combined_x_values = x.reshape(-1,1)
+            for i in range(combined_x_values.shape[0] - 1, -1, -1):
+                if (combined_x_values[i] == start_token or combined_x_values[i] == end_token or combined_x_values[i] == pad_token):
+                    y_predict = torch.cat((y_predict[:i], y_predict[i + 1:]))
+                    y = torch.cat((y[:i], y[i + 1:]))
+                    y_mask = torch.cat((y_mask[:i], y_mask[i + 1:]))
+            
             loss = criterion(y_predict, y)
             y_predict = torch.argmax(y_predict, dim=1).view(-1)
 
@@ -179,31 +287,62 @@ def test(data_loader):
     """
     num_iteration = 0
     deep_punctuation.eval()
+    correct = 0
+    total = 0
+
     # initialize true positive, false positive arrays... for [O, COMMA, PERIOD, QUESTION, OVERALL]
     tp = np.zeros(1+len(punctuation_dict), dtype=np.int)
     fp = np.zeros(1+len(punctuation_dict), dtype=np.int)
     fn = np.zeros(1+len(punctuation_dict), dtype=np.int)
     cm = np.zeros((len(punctuation_dict), len(punctuation_dict)), dtype=np.int)
-    correct = 0
-    total = 0
+
     with torch.no_grad():
-        for x, y, att, y_mask in tqdm(data_loader, desc='test'):
+        # save buffer sequence from previous batch
+        x_buffer = torch.empty(0)
+        y_predict_buffer = torch.empty(0)
+        y_mask_buffer = torch.empty(0)
+        x_to_be_processed = False
+        y_predict_to_be_processed = False
+        y_mask_to_be_processed = False
+
+        for x, y, att, y_mask, seq_count_in_block in tqdm(data_loader, desc='test'):
             x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
-            y_mask = y_mask.view(-1)
-            y_predict = deep_punctuation(x, att)                                    #make prediction using model
-            y = y.view(-1)
+            y_predict = deep_punctuation(x, att)
 
             # reduce end weights of sequences
             if use_window:
-                x_values = np.linspace(-3, 3, y_predict.shape[1])                   # get x values uniformly 
-                pdf_values = norm.pdf(x_values)                                     # get pdf values of a normal distribution
-                pdf_values = pdf_values.reshape(-1,1)        
-                min_max_scaler = preprocessing.MinMaxScaler((0.2,1))                # get weights to multiply to tensor between 0.2 to 1
-                bellcurve_weights = min_max_scaler.fit_transform(pdf_values)
-                bellcurve_weights = torch.from_numpy(bellcurve_weights).to(device)
-                y_predict = y_predict * bellcurve_weights
+                if (sequence_len % 2 == 0):
+                    middle_index = sequence_len // 2
+                    left_weights = np.linspace(0.5, 1, middle_index)
+                    weights = np.append(left_weights, np.flip(left_weights))
+                    weights = weights.reshape(-1, 1)
+                elif (sequence_len % 2 != 0):
+                    middle_index = (sequence_len // 2) + 1
+                    left_weights = np.linspace(0.5, 1, middle_index)
+                    weights = np.append(left_weights, np.flip(left_weights[:-1]))
+                    weights = weights.reshape(-1, 1)
+                weighted_window = torch.from_numpy(weights).to(device)
+                y_predict = y_predict * weighted_window
 
-            y_predict = y_predict.view(-1, y_predict.shape[2])
+            x, x_buffer, x_to_be_processed = sum_overlapping(x, x_buffer, x_to_be_processed, seq_count_in_block)
+            y_predict, y_predict_buffer, y_predict_to_be_processed = sum_overlapping(y_predict, y_predict_buffer, y_predict_to_be_processed, seq_count_in_block)
+            y = get_merged_values(y, seq_count_in_block)
+            y_mask, y_mask_buffer, y_mask_to_be_processed = sum_overlapping(y_mask, y_mask_buffer, y_mask_to_be_processed, seq_count_in_block)
+
+            y_predict = y_predict.view(-1, 4)
+            y = y.long()
+
+            # remove start, end, pad tokens for loss function
+            start_token = TOKEN_IDX[token_style]['START_SEQ']
+            end_token = TOKEN_IDX[token_style]['END_SEQ']
+            pad_token = TOKEN_IDX[token_style]['PAD']
+            combined_x_values = x.reshape(-1,1)
+            for i in range(combined_x_values.shape[0] - 1, -1, -1):
+                if (combined_x_values[i] == start_token or combined_x_values[i] == end_token or combined_x_values[i] == pad_token):
+                    y_predict = torch.cat((y_predict[:i], y_predict[i + 1:]))
+                    y = torch.cat((y[:i], y[i + 1:]))
+                    y_mask = torch.cat((y_mask[:i], y_mask[i + 1:]))
+                    
             y_predict = torch.argmax(y_predict, dim=1).view(-1)
 
             num_iteration += 1
@@ -224,14 +363,13 @@ def test(data_loader):
                     fn[cor] += 1    #increase false negative for ground truth
                     fp[prd] += 1    #increase false positive for prediction
                 cm[cor][prd] += 1   #increase confusion matrix
+
     # ignore first index which is for no punctuation
     # calculate overall punctuations
     tp[-1] = np.sum(tp[1:])
     fp[-1] = np.sum(fp[1:])
     fn[-1] = np.sum(fn[1:])
-    # print(tp, fp, fn)
     precision = tp/(tp+fp)
-    # print(precision)
     recall = tp/(tp+fn)
     f1 = 2 * precision * recall / (precision + recall)
 
@@ -242,37 +380,48 @@ def train():
         f.write(str(args)+'\n')
     best_val_acc = 0
 
-    for epoch in range(args.epoch):
-    # for epoch in range(1):  # for inspecting
-        # print('epoch: ', epoch)
+    # for epoch in range(args.epoch):
+    for epoch in range(1):  # for inspecting
+        print('epoch: ', epoch)
         train_loss = 0.0
         train_iteration = 0
         correct = 0
         total = 0
         deep_punctuation.train()
-        for x, y, att, y_mask in tqdm(train_loader, desc='train'):
-            print("\nx:", x)
+        for x, y, att, y_mask, seq_count_in_block in tqdm(train_loader, desc='train'):
             x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
             y_mask = y_mask.view(-1)
             y_predict = deep_punctuation(x, att)
-            # print("\ny predict:", y_predict)
 
             # reduce end weights of sequences
             if use_window:
-                x_values = np.linspace(-3, 3, y_predict.shape[1])                   # get x values uniformly 
-                # print('\nbellcurve x values:\n', x_values)
-                pdf_values = norm.pdf(x_values)                                     # get pdf values of a normal distribution
-                pdf_values = pdf_values.reshape(-1,1)       
-                # print('\nbellcurve y values:\n', pdf_values)
-                min_max_scaler = preprocessing.MinMaxScaler((0.2,1))                # get weights to multiply to tensor between 0.2 to 1
-                bellcurve_weights = min_max_scaler.fit_transform(pdf_values)
-                bellcurve_weights = torch.from_numpy(bellcurve_weights).to(device)
-                # print('\nbellcurve y values normalized:\n', bellcurve_weights)
-                y_predict = y_predict * bellcurve_weights
-                # print('\ny_predict:\n', y_predict)
+                if (sequence_len % 2 == 0):
+                    middle_index = sequence_len // 2
+                    left_weights = np.linspace(0.5, 1, middle_index)
+                    weights = np.append(left_weights, np.flip(left_weights))
+                    weights = weights.reshape(-1, 1)
+                elif (sequence_len % 2 != 0):
+                    middle_index = (sequence_len // 2) + 1
+                    left_weights = np.linspace(0.5, 1, middle_index)
+                    weights = np.append(left_weights, np.flip(left_weights[:-1]))
+                    weights = weights.reshape(-1, 1)
+                weighted_window = torch.from_numpy(weights).to(device)
+                y_predict = y_predict * weighted_window
+
             y_predict = y_predict.view(-1, y_predict.shape[2])
             y = y.view(-1)
 
+            # remove start, end, pad tokens for loss function
+            start_token = TOKEN_IDX[token_style]['START_SEQ']
+            end_token = TOKEN_IDX[token_style]['END_SEQ']
+            pad_token = TOKEN_IDX[token_style]['PAD']
+            combined_x_values = x.reshape(-1,1)
+            for i in range(combined_x_values.shape[0] - 1, -1, -1):
+                if (combined_x_values[i] == start_token or combined_x_values[i] == end_token or combined_x_values[i] == pad_token):
+                    y_predict = torch.cat((y_predict[:i], y_predict[i + 1:]))
+                    y = torch.cat((y[:i], y[i + 1:]))
+                    y_mask = torch.cat((y_mask[:i], y_mask[i + 1:]))
+                    
             loss = criterion(y_predict, y)
             y_predict = torch.argmax(y_predict, dim=1).view(-1)
             correct += torch.sum(y_mask * (y_predict == y).long()).item()
