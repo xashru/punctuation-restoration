@@ -51,26 +51,30 @@ if args.language == 'english':
     test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
     test_set = [val_set, test_set_ref, test_set_asr]
-elif args.language == 'utt_with_20%_ted_talk':
-    train_set = Dataset([os.path.join(args.data_path, 'utt/train_utt'), os.path.join(args.data_path, 'en/train_ted_talk_20%')], tokenizer=tokenizer, sequence_len=sequence_len,
+elif args.language == 'utt_with_ted_talk_no_asr':
+    train_set = Dataset([os.path.join(args.data_path, 'utt/train_utt'), os.path.join(args.data_path, 'en/test2011')], tokenizer=tokenizer, sequence_len=sequence_len,
                         token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
     val_set = Dataset(os.path.join(args.data_path, 'en/dev2012'), tokenizer=tokenizer, sequence_len=sequence_len,
                       token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
-    test_set_ref = Dataset(os.path.join(args.data_path, 'en/test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
-                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
-    test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
-                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
-    test_set = [val_set, test_set_ref, test_set_asr]
-elif args.language == 'utt_with_20%_LJ_speech':
+    # test_set_ted_talk = Dataset(os.path.join(args.data_path, 'en/train2012'), tokenizer=tokenizer, sequence_len=sequence_len,
+    #                        token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set = [val_set]
+elif args.language == 'utt_with_ted_talk_asr':
+    train_set = Dataset([os.path.join(args.data_path, 'utt/train_utt'), os.path.join(args.data_path, 'en/test2011asr')], tokenizer=tokenizer, sequence_len=sequence_len,
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
+    val_set = Dataset(os.path.join(args.data_path, 'en/dev2012'), tokenizer=tokenizer, sequence_len=sequence_len,
+                      token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    # test_set_ted_talk = Dataset(os.path.join(args.data_path, 'en/train2012'), tokenizer=tokenizer, sequence_len=sequence_len,
+    #                        token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set = [val_set]
+elif args.language == 'utt_with_LJ_speech':
     train_set = Dataset([os.path.join(args.data_path, 'utt/train_utt'), os.path.join(args.data_path, 'LJ_Speech/train_LJ_Speech_20%')], tokenizer=tokenizer, sequence_len=sequence_len,
                         token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
-    val_set = Dataset(os.path.join(args.data_path, 'LJ_Speech/non_fiction_80%'), tokenizer=tokenizer, sequence_len=sequence_len,
+    val_set = Dataset(os.path.join(args.data_path, 'LJ_Speech/dev_LJ_Speech_10%'), tokenizer=tokenizer, sequence_len=sequence_len,
                       token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
-    test_set_ref = Dataset(os.path.join(args.data_path, 'en/test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
-                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
-    test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
-                           token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
-    test_set = [val_set, test_set_ref, test_set_asr]
+    # test_set_LJ = Dataset(os.path.join(args.data_path, 'LJ_Speech/test_LJ_Speech_70%'), tokenizer=tokenizer, sequence_len=sequence_len,
+    #                        token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
+    test_set = [val_set]
 elif args.language == 'utt':
     train_set = Dataset(os.path.join(args.data_path, 'utt/train_utt'), tokenizer=tokenizer, sequence_len=sequence_len,
                         token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
@@ -169,7 +173,7 @@ def sum_overlapping(x, buffer_sequence, to_be_processed, seq_count_in_block):
 
     # get all relevant second halves
     sum_of_seq = x
-    exclude_first_half = torch.ones(x.shape[0])
+    exclude_first_half = torch.ones(x.shape[0]).to(device)
     second_half_mask = torch.clone(seq_count_in_block)
     to_restore = False
     if 1 in second_half_mask[:-1]:
@@ -179,21 +183,21 @@ def sum_overlapping(x, buffer_sequence, to_be_processed, seq_count_in_block):
     second_half_mask[-1] = 1
     second_half_mask = torch.column_stack((exclude_first_half, second_half_mask))
     second_half_mask = second_half_mask.unsqueeze(-1)
-    sum_of_seq = torch.masked_select(sum_of_seq, second_half_mask == 0)
+    sum_of_seq = torch.masked_select(sum_of_seq, second_half_mask == 0).to(device)
     sum_of_seq = sum_of_seq.reshape(-1, 1, x.shape[2])
 
     
     # append zeros at the start to account for removed tensors
-    sum_of_seq = torch.cat((sum_of_seq, torch.zeros(sum_of_seq.shape[0], 1, sum_of_seq.shape[2])), 1)
+    sum_of_seq = torch.cat((sum_of_seq, torch.zeros(sum_of_seq.shape[0], 1, sum_of_seq.shape[2]).to(device)), 1)
     if to_restore:
         sum_of_seq = torch.cat((sum_of_seq[:end_block_index], torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]), sum_of_seq[end_block_index:]))
     
-    sum_of_seq = torch.cat((torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]), sum_of_seq))
+    sum_of_seq = torch.cat((torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]).to(device), sum_of_seq))
 
     x = x + sum_of_seq
 
     # get all first half + end of word batches as final output
-    include_first_half = torch.ones(x.shape[0])
+    include_first_half = torch.ones(x.shape[0]).to(device)
     seq_mask = torch.clone(seq_count_in_block)
     seq_mask = torch.column_stack((include_first_half, seq_mask))
     seq_mask = seq_mask.unsqueeze(-1)
@@ -206,7 +210,7 @@ def get_merged_values(y, seq_count_in_block):
     y = y.reshape(y.shape[0], 2, -1)
 
     # get all first half + end of word batches as final output
-    include_first_half = torch.ones(y.shape[0])
+    include_first_half = torch.ones(y.shape[0]).to(device)
     seq_mask = torch.clone(seq_count_in_block)
     seq_mask = torch.column_stack((include_first_half, seq_mask))
     seq_mask = seq_mask.unsqueeze(-1)
@@ -234,9 +238,9 @@ def validate(data_loader):
 
         for x, y, att, y_mask, seq_count_in_block in tqdm(data_loader, desc='eval'):
             # print(x.shape, y.shape, att.shape, y_mask.shape)
-            x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)            
+            x, y, att, y_mask, seq_count_in_block = x.to(device), y.to(device), att.to(device), y_mask.to(device), seq_count_in_block.to(device)     
             y_predict = deep_punctuation(x, att)
-
+            # print(x)
             # reduce end weights of sequences
             if use_window:
                 if (sequence_len % 2 == 0):
@@ -256,7 +260,7 @@ def validate(data_loader):
             y_predict, y_predict_buffer, y_predict_to_be_processed = sum_overlapping(y_predict, y_predict_buffer, y_predict_to_be_processed, seq_count_in_block)
             y = get_merged_values(y, seq_count_in_block)
             y_mask, y_mask_buffer, y_mask_to_be_processed = sum_overlapping(y_mask, y_mask_buffer, y_mask_to_be_processed, seq_count_in_block)
-
+            # print(x)
             y_predict = y_predict.view(-1, 4)
             y = y.long()
 
@@ -306,7 +310,7 @@ def test(data_loader):
         y_mask_to_be_processed = False
 
         for x, y, att, y_mask, seq_count_in_block in tqdm(data_loader, desc='test'):
-            x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
+            x, y, att, y_mask, seq_count_in_block = x.to(device), y.to(device), att.to(device), y_mask.to(device), seq_count_in_block.to(device)   
             y_predict = deep_punctuation(x, att)
 
             # reduce end weights of sequences
@@ -380,16 +384,16 @@ def train():
         f.write(str(args)+'\n')
     best_val_acc = 0
 
-    # for epoch in range(args.epoch):
-    for epoch in range(1):  # for inspecting
-        print('epoch: ', epoch)
+    for epoch in range(args.epoch):
+    # for epoch in range(1):  # for inspecting
+        # print('epoch: ', epoch)
         train_loss = 0.0
         train_iteration = 0
         correct = 0
         total = 0
         deep_punctuation.train()
         for x, y, att, y_mask, seq_count_in_block in tqdm(train_loader, desc='train'):
-            x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
+            x, y, att, y_mask, seq_count_in_block = x.to(device), y.to(device), att.to(device), y_mask.to(device), seq_count_in_block.to(device)  
             y_mask = y_mask.view(-1)
             y_predict = deep_punctuation(x, att)
 
@@ -410,7 +414,7 @@ def train():
 
             y_predict = y_predict.view(-1, y_predict.shape[2])
             y = y.view(-1)
-
+            
             # remove start, end, pad tokens for loss function
             start_token = TOKEN_IDX[token_style]['START_SEQ']
             end_token = TOKEN_IDX[token_style]['END_SEQ']
@@ -456,18 +460,18 @@ def train():
 
     print('Best validation Acc:', best_val_acc)
     deep_punctuation.load_state_dict(torch.load(model_save_path))
-    for loader in test_loaders:
-        precision, recall, f1, accuracy, cm = test(loader)
-        log = 'Precision: ' + str(precision) + '\n' + 'Recall: ' + str(recall) + '\n' + 'F1 score: ' + str(f1) + \
-              '\n' + 'Accuracy:' + str(accuracy) + '\n' + 'Confusion Matrix' + str(cm) + '\n'
-        print(log)
-        with open(log_path, 'a') as f:
-            f.write(log)
-        log_text = ''
-        for i in range(1, 5):
-            log_text += str(precision[i] * 100) + ' ' + str(recall[i] * 100) + ' ' + str(f1[i] * 100) + ' '
-        with open(log_path, 'a') as f:
-            f.write(log_text[:-1] + '\n\n')
+    # for loader in test_loaders:
+    #     precision, recall, f1, accuracy, cm = test(loader)
+    #     log = 'Precision: ' + str(precision) + '\n' + 'Recall: ' + str(recall) + '\n' + 'F1 score: ' + str(f1) + \
+    #           '\n' + 'Accuracy:' + str(accuracy) + '\n' + 'Confusion Matrix' + str(cm) + '\n'
+    #     print(log)
+    #     with open(log_path, 'a') as f:
+    #         f.write(log)
+    #     log_text = ''
+    #     for i in range(1, 5):
+    #         log_text += str(precision[i] * 100) + ' ' + str(recall[i] * 100) + ' ' + str(f1[i] * 100) + ' '
+    #     with open(log_path, 'a') as f:
+    #         f.write(log_text[:-1] + '\n\n')
 
 
 if __name__ == '__main__':

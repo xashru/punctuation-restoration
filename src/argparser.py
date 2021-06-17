@@ -28,7 +28,7 @@ def parse_arguments():
     parser.add_argument('--epoch', default=10, type=int, help='total epochs (default: 10)')
     parser.add_argument('--save-path', default='out/', type=str, help='model and log save directory')
     parser.add_argument('--trained-model-path', default=False, type=str, help='load existing model')
-    parser.add_argument('--sliding-window', default=False, type=lambda x: (str(x).lower() == 'true'), help='use sliding window implementation')
+    parser.add_argument('--sliding-window', default=True, type=lambda x: (str(x).lower() == 'true'), help='use sliding window implementation')
     parser.add_argument('--stride_size', default=0.5, type=float, help='new sequence at every stride')
 
     args = parser.parse_args()

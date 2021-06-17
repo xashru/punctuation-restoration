@@ -68,10 +68,14 @@ def parse_data_by_block(file_path, tokenizer, sequence_len, token_style, stride_
     :return: list of [tokens_index, punctuation_index, attention_masks, punctuation_mask], each having sequence_len
     punctuation_mask is used to ignore special indices like padding and intermediate sub-word token during evaluation
     """
+    
     data_items = []
     
     with open(file_path, 'r', encoding='utf-8') as f:
         lines = [line for line in f.read().split('\n') if line.strip()]
+
+    if (file_path.find('LJ_Speech') == -1):
+        return sliding_window(lines, tokenizer, sequence_len, token_style, stride_size)
 
     process_at_index = 0
     while (len(lines[process_at_index:]) > 0):
@@ -126,7 +130,7 @@ def sliding_window(line_block, tokenizer, sequence_len, token_style, stride_size
         y.append(0)
         y_mask.append(1)
         attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x]
-        data_items.append([x, y, attn_mask, y_mask])
+        data_items.append([x, y, attn_mask, y_mask, 0])
 
         process_at_index += stride_size_tokens
     
@@ -145,10 +149,10 @@ def sliding_window(line_block, tokenizer, sequence_len, token_style, stride_size
             y = y + [0 for _ in range(sequence_len - len(y))]
             y_mask = y_mask + [0 for _ in range(sequence_len - len(y_mask))]
         attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x]
-        data_items.append([x, y, attn_mask, y_mask])
+        data_items.append([x, y, attn_mask, y_mask, 1])
         
-
-    data_items = list(map(lambda x: x + [1] if x == data_items[-1] else x + [0], data_items))
+    data_items[-1][-1] = 1
+    # data_items = list(map(lambda x: x + [1] if x == data_items[-1] else x + [0], data_items))
     # print('\nsequences:')
     # for i in data_items:
     #     print(i)
@@ -236,6 +240,7 @@ class Dataset(torch.utils.data.Dataset):
         y = torch.tensor(y)
         attn_mask = torch.tensor(attn_mask)
         y_mask = torch.tensor(y_mask)
+        seq_count_in_block = torch.tensor(seq_count_in_block)
 
         return x, y, attn_mask, y_mask, seq_count_in_block
 
