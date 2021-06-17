@@ -42,9 +42,9 @@ def convert_word(text):
 
 # 3. get train / test split
 
-data_file = open('tokenized_full_set', "r", encoding="utf-8")
-train_file = open('../data/LJ_Speech/train_LJ_Speech_20%', 'w', encoding='utf8')
-test_file = open('../data/LJ_Speech/test_LJ_Speech_80%', 'w', encoding='utf8')
+data_file = open('../data/LJ_Speech/test_LJ_Speech_80%', "r", encoding="utf-8")
+train_file = open('../data/LJ_Speech/train_LJ_Speech_10%', 'w', encoding='utf8')
+test_file = open('../data/LJ_Speech/test_LJ_Speech_70%', 'w', encoding='utf8')
 data_lines = []
 process = True
 while process:
@@ -60,7 +60,7 @@ while process:
 	if process and block != '':
 		data_lines.append(block)
 # print(data_lines[-1])
-test, train = train_test_split(data_lines, test_size=0.2, shuffle=True)
+test, train = train_test_split(data_lines, test_size=0.09, shuffle=True)
 
 train_file.write("".join(train))
 test_file.write("".join(test))
