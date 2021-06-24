@@ -102,7 +102,7 @@ def sum_overlapping(x, buffer_sequence, to_be_processed, seq_count_in_block):
     # append zeros at the start to account for removed tensors
     sum_of_seq = torch.cat((sum_of_seq, torch.zeros(sum_of_seq.shape[0], 1, sum_of_seq.shape[2]).to(device)), 1)
     if to_restore:
-        sum_of_seq = torch.cat((sum_of_seq[:end_block_index], torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]), sum_of_seq[end_block_index:]))
+        sum_of_seq = torch.cat((sum_of_seq[:end_block_index], torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]).to(device), sum_of_seq[end_block_index:]))
     
     sum_of_seq = torch.cat((torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]).to(device), sum_of_seq))
 
@@ -130,7 +130,7 @@ def get_merged_values(y, seq_count_in_block):
 
     return y
 
-def test(data_loader):
+def test_window(data_loader):
     """
     :return: precision[numpy array], recall[numpy array], f1 score [numpy array], accuracy, confusion matrix
     """
@@ -158,25 +158,24 @@ def test(data_loader):
             y_predict = deep_punctuation(x, att)
 
             # reduce end weights of sequences
-            if args.sliding_window:
-                sequence_len = args.sequence_length
-                if (sequence_len % 2 == 0):
-                    middle_index = sequence_len // 2
-                    left_weights = np.linspace(0.5, 1, middle_index)
-                    weights = np.append(left_weights, np.flip(left_weights))
-                    weights = weights.reshape(-1, 1)
-                elif (sequence_len % 2 != 0):
-                    middle_index = (sequence_len // 2) + 1
-                    left_weights = np.linspace(0.5, 1, middle_index)
-                    weights = np.append(left_weights, np.flip(left_weights[:-1]))
-                    weights = weights.reshape(-1, 1)
-                weighted_window = torch.from_numpy(weights).to(device)
-                y_predict = y_predict * weighted_window
+            sequence_len = args.sequence_length
+            if (sequence_len % 2 == 0):
+                middle_index = sequence_len // 2
+                left_weights = np.linspace(0, 1, middle_index)
+                weights = np.append(left_weights, np.flip(left_weights))
+                weights = weights.reshape(-1, 1)
+            elif (sequence_len % 2 != 0):
+                middle_index = (sequence_len // 2) + 1
+                left_weights = np.linspace(0, 1, middle_index)
+                weights = np.append(left_weights, np.flip(left_weights[:-1]))
+                weights = weights.reshape(-1, 1)
+            weighted_window = torch.from_numpy(weights).to(device)
+            y_predict = y_predict * weighted_window
 
             x, x_buffer, x_to_be_processed = sum_overlapping(x, x_buffer, x_to_be_processed, seq_count_in_block)
             y_predict, y_predict_buffer, y_predict_to_be_processed = sum_overlapping(y_predict, y_predict_buffer, y_predict_to_be_processed, seq_count_in_block)
             y = get_merged_values(y, seq_count_in_block)
-            y_mask, y_mask_buffer, y_mask_to_be_processed = sum_overlapping(y_mask, y_mask_buffer, y_mask_to_be_processed, seq_count_in_block)
+            y_mask = get_merged_values(y_mask, seq_count_in_block)
 
             y_predict = y_predict.view(-1, 4)
             y = y.long()
@@ -221,11 +220,75 @@ def test(data_loader):
 
     return precision, recall, f1, correct/total, cm
 
+def test_original(data_loader):
+    print('original')
+    """
+    :return: precision[numpy array], recall[numpy array], f1 score [numpy array], accuracy, confusion matrix
+    """
+    num_iteration = 0
+    deep_punctuation.eval()
+    # +1 for overall result
+    tp = np.zeros(1+len(punctuation_dict), dtype=np.int)
+    fp = np.zeros(1+len(punctuation_dict), dtype=np.int)
+    fn = np.zeros(1+len(punctuation_dict), dtype=np.int)
+    cm = np.zeros((len(punctuation_dict), len(punctuation_dict)), dtype=np.int)
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for x, y, att, y_mask in tqdm(data_loader, desc='test'):
+            x, y, att, y_mask = x.to(device), y.to(device), att.to(device), y_mask.to(device)
+            y_mask = y_mask.view(-1)
+            y_predict = deep_punctuation(x, att)
+            y = y.view(-1)
+            y_predict = y_predict.view(-1, y_predict.shape[2])
+
+            # added to test if there is change from removing start end seq --------- change(1)
+            # remove start, end, pad tokens for loss function
+            start_token = TOKEN_IDX[token_style]['START_SEQ']
+            end_token = TOKEN_IDX[token_style]['END_SEQ']
+            pad_token = TOKEN_IDX[token_style]['PAD']
+            combined_x_values = x.reshape(-1,1)
+            for i in range(combined_x_values.shape[0] - 1, -1, -1):
+                if (combined_x_values[i] == start_token or combined_x_values[i] == end_token or combined_x_values[i] == pad_token):
+                    y_predict = torch.cat((y_predict[:i], y_predict[i + 1:]))
+                    y = torch.cat((y[:i], y[i + 1:]))
+                    y_mask = torch.cat((y_mask[:i], y_mask[i + 1:]))
+
+            y_predict = torch.argmax(y_predict, dim=1).view(-1)
+            num_iteration += 1
+            y_mask = y_mask.view(-1)
+            correct += torch.sum(y_mask * (y_predict == y).long()).item()
+            total += torch.sum(y_mask).item()
+            for i in range(y.shape[0]):
+                if y_mask[i] == 0:
+                    # we can ignore this because we know there won't be any punctuation in this position
+                    # since we created this position due to padding or sub-word tokenization
+                    continue
+                cor = y[i]
+                prd = y_predict[i]
+                if cor == prd:
+                    tp[cor] += 1
+                else:
+                    fn[cor] += 1
+                    fp[prd] += 1
+                cm[cor][prd] += 1
+    # ignore first index which is for no punctuation
+    tp[-1] = np.sum(tp[1:])
+    fp[-1] = np.sum(fp[1:])
+    fn[-1] = np.sum(fn[1:])
+    precision = tp/(tp+fp)
+    recall = tp/(tp+fn)
+    f1 = 2 * precision * recall / (precision + recall)
+
+    return precision, recall, f1, correct/total, cm
 
 def run():
     deep_punctuation.load_state_dict(torch.load(model_save_path))
     for i in range(len(test_loaders)):
-        precision, recall, f1, accuracy, cm = test(test_loaders[i])
+        if args.sliding_window:
+            precision, recall, f1, accuracy, cm = test_window(test_loaders[i])
+        else:
+            precision, recall, f1, accuracy, cm = test_original(test_loaders[i])
         log = test_files[i] + '\n' + 'Precision: ' + str(precision) + '\n' + 'Recall: ' + str(recall) + '\n' + \
             'F1 score: ' + str(f1) + '\n' + 'Accuracy:' + str(accuracy) + '\n' + 'Confusion Matrix' + str(cm) + '\n'
         print(log)

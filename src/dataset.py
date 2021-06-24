@@ -156,6 +156,8 @@ def sliding_window(line_block, tokenizer, sequence_len, token_style, stride_size
     # print('\nsequences:')
     # for i in data_items:
     #     print(i)
+    
+    # print(data_items)
     return data_items
 
 def split_word(x):
@@ -195,6 +197,7 @@ class Dataset(torch.utils.data.Dataset):
         self.token_style = token_style
         self.is_train = is_train
         self.augment_type = augment_type
+        self.is_sliding_window = is_sliding_window
 
     def __len__(self):
         return len(self.data)
@@ -231,7 +234,6 @@ class Dataset(torch.utils.data.Dataset):
         y = self.data[index][1]
         attn_mask = self.data[index][2]
         y_mask = self.data[index][3]
-        seq_count_in_block = self.data[index][4]
 
         if self.is_train and self.augment_rate > 0:
             x, y, attn_mask, y_mask = self._augment(x, y, y_mask)
@@ -240,9 +242,15 @@ class Dataset(torch.utils.data.Dataset):
         y = torch.tensor(y)
         attn_mask = torch.tensor(attn_mask)
         y_mask = torch.tensor(y_mask)
-        seq_count_in_block = torch.tensor(seq_count_in_block)
+        
 
-        return x, y, attn_mask, y_mask, seq_count_in_block
+        if self.is_sliding_window:
+            seq_count_in_block = self.data[index][4]
+            seq_count_in_block = torch.tensor(seq_count_in_block)
+            return x, y, attn_mask, y_mask, seq_count_in_block
+            
+        
+        return x, y, attn_mask, y_mask
 
 # For inspection and debugging dataset.py
 # args = parse_arguments()
