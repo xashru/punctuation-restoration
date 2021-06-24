@@ -1,25 +1,28 @@
 import matplotlib.pyplot as plt
 
 # training files
+# en_file = open('../../data/en/train2012', "r", encoding="utf-8")
 # utt_file = open('../../data/utt/train_utt', "r", encoding="utf-8")
 # mini_file = open('../../data/en/test2011', "r", encoding="utf-8")
 # mini_file = open('../../data/en/test2011asr', "r", encoding="utf-8")
 # mini_file = open('../../data/LJ_Speech/train_LJ_Speech_20%', "r", encoding="utf-8")
+# mini_file = open('../../data/utt_new_test/train_utt', "r", encoding="utf-8")
 
 # dev files
 # dev_file = open('../../data/en/dev2012', "r", encoding="utf-8")
 # mini_file = open('../../data/LJ_Speech/dev_LJ_Speech_10%', "r", encoding="utf-8")
+# mini_file = open('../../data/utt_new_test/dev_utt', "r", encoding="utf-8")
 
 # test files
-file1 = open('../../data/test/test_LJ_Speech_70%', "r", encoding="utf-8")
+# file1 = open('../../data/test/test_LJ_Speech_70%', "r", encoding="utf-8")
 # file2 = open('../../data/test/test_utt', "r", encoding="utf-8")
 # file3 = open('../../data/test/test_2011', "r", encoding="utf-8")
 # file4 = open('../../data/test/test_2011asr', "r", encoding="utf-8")
 # file5 = open('../../data/test/train2012', "r", encoding="utf-8")
+file6 = open('../../data/utt_new_test/utt_test', "r", encoding="utf-8")
 
 
-
-file_list = [file1]
+file_list = [file6]
 
 def count_labels(data_file):
 	corpus = data_file.readlines()
