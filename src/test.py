@@ -57,7 +57,17 @@ device = torch.device('cuda' if (args.cuda and torch.cuda.is_available()) else '
 deep_punctuation = DeepPunctuation(args.pretrained_model, freeze_bert=False, lstm_dim=args.lstm_dim)
 deep_punctuation.to(device)
 
+
 def sum_overlapping(x, buffer_sequence, to_be_processed, seq_count_in_block):
+    '''
+    sums up the values where the sequences correspond to the same overlapping sequence
+    :param x: tensor of x values with shape [batch_size, sequence_length]
+    :param buffer_sequence: a buffer tensor from past batches if required to be merged, otherwise empty buffer
+    :param to_be_processed: boolean value to decide if merging needs to be done with the buffer_sequence
+    :param seq_count_in_block: tensor of values of size batch_size, 1 to represent that sequence is an end and not linked to any further sequence 
+    :returns: x tensor as a single tensor with its values summed up, buffer sequence to be saved for next batch, boolean flag to signify if buffer sequence need to be used 
+    '''
+    ############### function is same as the one in train.py ##############
     #################### sum up overlapping sequences ####################
 
     # truncate all first and last token
@@ -69,27 +79,25 @@ def sum_overlapping(x, buffer_sequence, to_be_processed, seq_count_in_block):
     
     # handle sequence in buffer from previous batch
     if to_be_processed:
-        # print("Added buffer sequence from previous\n")
         x[0][0] += buffer_sequence
 
     # buffer the second half of last sequence for next batch
     if seq_count_in_block[-1] == 0:     # needs to be added to next batch
         buffer_sequence = x[-1][-1]
-        # print('buffered: ', x[-1][-1])
         to_be_processed = True
     elif seq_count_in_block[-1] == 1:   # last sequence is end of word block
         to_be_processed = False
 
     
-    # add all second half to next first half (exclude end of block and last seq)
+    # add all second halves to next first half (exclude end of block and last seq)
 
-    # get all relevant second halves
+    # get all relevant second halves using ones mask
     sum_of_seq = x
     exclude_first_half = torch.ones(x.shape[0]).to(device)
     second_half_mask = torch.clone(seq_count_in_block)
     to_restore = False
     if 1 in second_half_mask[:-1]:
-        end_block_index = (second_half_mask == 1).nonzero().item()
+        end_block_index = (second_half_mask[:-1] == 1).nonzero().tolist()
         to_restore = True
 
     second_half_mask[-1] = 1
@@ -102,10 +110,10 @@ def sum_overlapping(x, buffer_sequence, to_be_processed, seq_count_in_block):
     # append zeros at the start to account for removed tensors
     sum_of_seq = torch.cat((sum_of_seq, torch.zeros(sum_of_seq.shape[0], 1, sum_of_seq.shape[2]).to(device)), 1)
     if to_restore:
-        sum_of_seq = torch.cat((sum_of_seq[:end_block_index], torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]).to(device), sum_of_seq[end_block_index:]))
+        for i in end_block_index:
+            sum_of_seq = torch.cat((sum_of_seq[:i[0]], torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]).to(device), sum_of_seq[i[0]:]))
     
     sum_of_seq = torch.cat((torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]).to(device), sum_of_seq))
-
     x = x + sum_of_seq
 
     # get all first half + end of word batches as final output
@@ -118,16 +126,22 @@ def sum_overlapping(x, buffer_sequence, to_be_processed, seq_count_in_block):
     return x, buffer_sequence, to_be_processed
 
 def get_merged_values(y, seq_count_in_block):
-    y = y[:, 1:-1]
-    y = y.reshape(y.shape[0], 2, -1)
+    # function same as the one in train.py
+    '''
+    removes duplicate sequences that correspond to the same overlapping sequence
+    :param y: tensor of y values with shape [batch_size, sequence_length]
+    :param seq_count_in_block: tensor of values of size batch_size, 1 to represent that sequence is an end and not linked to any further sequence 
+    :return: the y tensor with relevant duplicate values dropped combined to a single tensor
+    '''
+    y = y[:, 1:-1]                                          # remove y values for start and end tokens
+    y = y.reshape(y.shape[0], 2, -1)                        # split y tensor into 2 halves: shape[batch_size, 2, (seq_len-2)/2]
 
-    # get all first half + end of word batches as final output
-    include_first_half = torch.ones(y.shape[0]).to(device)
+    # get all first halves + end of word batches as final output
+    include_first_half = torch.ones(y.shape[0]).to(device)  # create a mask of ones to do this since end of word batches in seq_count_in_block are labelled as 1
     seq_mask = torch.clone(seq_count_in_block)
     seq_mask = torch.column_stack((include_first_half, seq_mask))
     seq_mask = seq_mask.unsqueeze(-1)
     y = torch.masked_select(y, seq_mask == 1)
-
     return y
 
 def test_window(data_loader):
@@ -221,7 +235,6 @@ def test_window(data_loader):
     return precision, recall, f1, correct/total, cm
 
 def test_original(data_loader):
-    print('original')
     """
     :return: precision[numpy array], recall[numpy array], f1 score [numpy array], accuracy, confusion matrix
     """

@@ -77,11 +77,11 @@ elif args.language == 'ted_talk_with_utt':
                            token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
     test_set = [val_set, new_utt_test]
 elif args.language == 'sr_split':
-    train_set = Dataset([os.path.join(args.data_path, 'en/train2012'), os.path.join(args.data_path, 'utt_new_test/sr_split/combined_train')], tokenizer=tokenizer, sequence_len=sequence_len,
+    train_set = Dataset([os.path.join(args.data_path, 'en/train2012'), os.path.join(args.data_path, 'sr_split_on_dataset1/combined_train')], tokenizer=tokenizer, sequence_len=sequence_len,
                         token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type, is_sliding_window=use_window, stride_size=stride_size)
-    val_set = Dataset(os.path.join(args.data_path, 'utt_new_test/sr_split/combined_dev'), tokenizer=tokenizer, sequence_len=sequence_len,
+    val_set = Dataset(os.path.join(args.data_path, 'sr_split_on_dataset1/combined_dev'), tokenizer=tokenizer, sequence_len=sequence_len,
                       token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
-    test_set_sr = Dataset(os.path.join(args.data_path, 'utt_new_test/utt_test'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_set_sr = Dataset(os.path.join(args.data_path, 'sr_split_on_dataset1/utt_test'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False, is_sliding_window=use_window, stride_size=stride_size)
     test_set = [val_set, test_set_sr]
 elif args.language == 'restore_sr_by_inference':
