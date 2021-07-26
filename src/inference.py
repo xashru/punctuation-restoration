@@ -108,6 +108,8 @@ def fill_unknown(lst, token_style):
     return lst
 
 def sum_overlapping(x, seq_count_in_block):
+    # same function as in train.py and test.py but there is no need for buffer sequence since there are no batches during inference
+    # and we can infer the whole corpus at once  
     #################### sum up overlapping sequences ####################
 
     # truncate all first and last token
@@ -117,6 +119,7 @@ def sum_overlapping(x, seq_count_in_block):
     # split into first half and second half of sequence 
     x = x.reshape(x.shape[0], 2, -1)
     
+    
     # add all second half to next first half (exclude end of block and last seq)
     # get all relevant second halves
     sum_of_seq = x
@@ -124,7 +127,7 @@ def sum_overlapping(x, seq_count_in_block):
     second_half_mask = torch.clone(seq_count_in_block)
     to_restore = False
     if 1 in second_half_mask[:-1]:
-        end_block_index = (second_half_mask == 1).nonzero().item()
+        end_block_index = (second_half_mask[:-1] == 1).nonzero().item()
         to_restore = True
 
     second_half_mask[-1] = 1
@@ -137,7 +140,8 @@ def sum_overlapping(x, seq_count_in_block):
     # append zeros at the start to account for removed tensors
     sum_of_seq = torch.cat((sum_of_seq, torch.zeros(sum_of_seq.shape[0], 1, sum_of_seq.shape[2]).to(device)), 1)
     if to_restore:
-        sum_of_seq = torch.cat((sum_of_seq[:end_block_index], torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]).to(device), sum_of_seq[end_block_index:]))
+        for i in end_block_index:
+            sum_of_seq = torch.cat((sum_of_seq[:i[0]], torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]).to(device), sum_of_seq[i[0]:]))
     
     sum_of_seq = torch.cat((torch.zeros(1, sum_of_seq.shape[1], sum_of_seq.shape[2]).to(device), sum_of_seq))
 
@@ -153,16 +157,16 @@ def sum_overlapping(x, seq_count_in_block):
     return x
 
 def get_merged_values(y, seq_count_in_block):
+    # same function as in train.py and test.py
     y = y[:, 1:-1]
     y = y.reshape(y.shape[0], 2, -1)
 
-    # get all first half + end of word batches as final output
+    # get all first halves + end of word batches as final output
     include_first_half = torch.ones(y.shape[0]).to(device)
     seq_mask = torch.clone(seq_count_in_block)
     seq_mask = torch.column_stack((include_first_half, seq_mask))
     seq_mask = seq_mask.unsqueeze(-1)
     y = torch.masked_select(y, seq_mask == 1)
-
     return y
 
 def inference_window():
@@ -183,17 +187,20 @@ def inference_window():
     if args.language != 'en':
         punctuation_map[2] = '।'
 
+    ########### apply sliding window implementation to duplicate inputs -- reference to dataset.py ##############################
     stride = stride_size
-    sequence_size = sequence_len - 2
-    stride_size_tokens = round(stride * sequence_size)
+    sequence_size = sequence_len - 2                        # account for start and end token
+    stride_size_tokens = round(stride * sequence_size)      # number of word tokens to take in half a sequence
     if stride > 0.5:
         raise Exception("Maximum stride length is 0.5!")
     elif stride_size_tokens <= 0:
         raise Exception("Stride size too small, please increase stride length!")
 
-    words = list(map(lambda x: tokenizer.convert_tokens_to_ids(tokenizer.tokenize(x.lower())), words))
-    words = list(map(lambda x: fill_unknown(x, token_style), words))
-    words = list(map(lambda x: [x, [0] * (len(x) - 1) + [1]], words))
+    words = list(map(lambda x: tokenizer.convert_tokens_to_ids(tokenizer.tokenize(x.lower())), words))  # tokenize word inputs
+    words = list(map(lambda x: fill_unknown(x, token_style), words))                                    # fill empty tokens
+    words = list(map(lambda x: [x, [0] * (len(x) - 1) + [1]], words))                                   # fill y_mask
+    
+    # obtain full list of tokens, and y_mask
     full_tokens = []
     full_y_mask = []
     for tokens, y_mask in words:
@@ -203,17 +210,22 @@ def inference_window():
     process_at_index = 0
     data_items = []
 
-    while (len(full_tokens[process_at_index:]) >= sequence_size):
+    while (len(full_tokens[process_at_index:]) >= sequence_size):   # loop until no more tokens to process
+        # initialize sequence with start token
         x = [TOKEN_IDX[token_style]['START_SEQ']]
         y_mask = [0] 
+
+        # add sequence until required length 
         x += full_tokens[process_at_index:process_at_index + sequence_size]
         y_mask += full_y_mask[process_at_index:process_at_index + sequence_size]
         x.append(TOKEN_IDX[token_style]['END_SEQ'])
         y_mask.append(0)
-        attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x]
-        data_items.append([x, attn_mask, y_mask])
-        process_at_index += stride_size_tokens
+
+        attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x] # initialize attn_mask for full sequence
+        data_items.append([x, attn_mask, y_mask])                                       # add sequence
+        process_at_index += stride_size_tokens                                          # advance by stride size(0.5)
     
+    # account for remaining tokens after while loop
     if (len(full_tokens[process_at_index:]) > 0):
         x = [TOKEN_IDX[token_style]['START_SEQ']]
         y_mask = [0] 
@@ -226,11 +238,12 @@ def inference_window():
             y_mask = y_mask + [0 for _ in range(sequence_len - len(y_mask))]
         attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x]
         data_items.append([x, attn_mask, y_mask])
-    
+    ################################## end of sliding window ###############################################
+
     with torch.no_grad():
-        x_combined = torch.empty(0)
-        y_predict_combined = torch.empty(0)
-        y_mask_combined = torch.empty(0)
+        x_combined = torch.empty(0).to(device)
+        y_predict_combined = torch.empty(0).to(device)
+        y_mask_combined = torch.empty(0).to(device)
         for seq in data_items:
             x = torch.tensor(seq[0]).reshape(1,-1)
             attn_mask = torch.tensor(seq[1]).reshape(1,-1)
@@ -238,7 +251,7 @@ def inference_window():
             x, attn_mask, y_mask = x.to(device), attn_mask.to(device), y_mask.to(device)
             y_predict = deep_punctuation(x, attn_mask)
 
-            # reduce end weights of sequences
+            # reduce end weights of sequences: sliding window triangle 0 to 1
             if (sequence_len % 2 == 0):
                 middle_index = sequence_len // 2
                 left_weights = np.linspace(0.5, 1, middle_index)
@@ -251,13 +264,15 @@ def inference_window():
                 weights = weights.reshape(-1, 1)
             weighted_window = torch.from_numpy(weights).to(device)
             y_predict = y_predict * weighted_window
+
             x_combined = torch.cat((x_combined, x))
             y_predict_combined = torch.cat((y_predict_combined, y_predict))
             y_mask_combined = torch.cat((y_mask_combined, y_mask))
-        seq_count_in_block = torch.zeros(x_combined.shape[0])
+        seq_count_in_block = torch.zeros(x_combined.shape[0]).to(device)
         seq_count_in_block[-1] = 1
 
         # concatenate everything into single tensor for sum overlapping function
+        # since we are trying to predict the values, we can combine the whole corpus into a tensor, there is no need to overlap between batches compared to in validation while training
         x = sum_overlapping(x_combined, seq_count_in_block)
         y_predict = sum_overlapping(y_predict_combined, seq_count_in_block)
         y_mask = get_merged_values(y_mask_combined, seq_count_in_block)
