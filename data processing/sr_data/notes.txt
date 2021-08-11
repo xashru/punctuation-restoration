@@ -1,0 +1,11 @@
+
+Here are some properties of the sr data files I have found after some inspection.
+
+1. full UTT dataset contains 1155 files (swXXXXX format)
+2. train and dev come from same UTT files (742 swXXXXX files)
+3. 392 of the 742 are found in the 1155 files
+4. there are 350 sw files in the train/dev set which are not found in the downloadable UTT files online
+5. there are no overlapping files between train and test set
+6. test set contains full texts from swXXXXX files, 761 files, all swX3XXX and swX4XXX taken up by test set, all test sets can be found in UTT files
+7. 2 files sw02289 and sw04379 (in the 1155 files) are in neither train or test sets
+8. dev set is a subset of the segments in train set
