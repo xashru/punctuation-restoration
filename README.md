@@ -2,18 +2,31 @@
 
 This repository contins official implementation of the paper [*Punctuation Restoration using Transformer Models for High-and Low-Resource Languages*](http://noisy-text.github.io/2020/pdf/2020.d200-1.18.pdf) accepted at the EMNLP workshop [W-NUT 2020](http://noisy-text.github.io/2020/).
 
+This project improves upon the above model by experimenting on different heuristics. This is an internship project from May 2021 to July 2021 and my [*Student Internship Report*](https://github.com/CodyChew/punctuation-restoration/blob/branch-sliding-window/SIP%20Report%20.pdf) summarizes the findings for this project.
+
 
 ## Data
 
-#### English
-English datasets are provided in `data/en` directory. These are collected from [here](https://drive.google.com/file/d/0B13Cc1a7ebTuMElFWGlYcUlVZ0k/view).
+The data files are compressed into a single zip file which contains all the data splits that have been used.
 
-#### Bangla
-Bangla datasets are provided in `data/bn` directory.
+#### IWSLT dataset (en)
 
+The IWSLT dataset consists of transcriptions from TED talks. The training and development set consist of 2.1M and 296K words, respectively. Two test sets are provided with manual and ASR transcriptions, each containing 12626 and 12822 words, respectively. This dataset is used in the above study in which I will also use the same splits for my experiments.
+
+#### Switchboard dataset (utt)
+
+1155 5-minute conversations that are manually labelled from the Switchboard corpus of telephone conversations. The splits I use changes throughout the course of my internship. Originally, I have a split which simply splits the whole continuous file into 3 files resulting in a 1.1M, 294K, 163K set split. Next, the training, dev and test sets are sampled by conversations, and then merged into single files resulting in 220K train, 500K dev, 912K test sets in number of words.
+
+#### LJ Speech dataset
+
+This is a [public domain speech dataset](https://keithito.com/LJ-Speech-Dataset/) consisting of 13,100 short audio clips of a single speaker reading passages from 7 non-fiction books. A transcription is provided for each clip. Clips vary in length from 1 to 10 seconds and have a total length of approximately 24 hours. The train, dev and test sets were split by sampling blocks of 1000 words, resulting in 45K train, 16K dev and 160K test sets in number of words.
+
+## Data Processing
+
+The data processing file contains all the files that deal with processing of data, including plotting of results and processing of original data files
 
 ## Model Architecture
-We fine-tune a Transformer architecture based language model (e.g., BERT) for the punctuation restoration task.
+A Transformer architecture based language model is used for this task and it is taken from the above paper [*Punctuation Restoration using Transformer Models for High-and Low-Resource Languages*](http://noisy-text.github.io/2020/pdf/2020.d200-1.18.pdf).
 Transformer encoder is followed by a bidirectional LSTM and linear layer that predicts target punctuation token at
 each sequence position.
 ![](./assets/model_architectue.png)
@@ -31,14 +44,8 @@ pip install -r requirements.txt
 To train punctuation restoration model with optimal parameter settings for English run the following command
 ```
 python src/train.py --cuda=True --pretrained-model=roberta-large --freeze-bert=False --lstm-dim=-1 
---language=english --seed=1 --lr=5e-6 --epoch=10 --use-crf=False --augment-type=all  --augment-rate=0.15 
---alpha-sub=0.4 --alpha-del=0.4 --data-path=data --save-path=out
-```
-To train for Bangla the corresponding command is
-```
-python src/train.py --cuda=True --pretrained-model=xlm-roberta-large --freeze-bert=False --lstm-dim=-1 
---language=bangla --seed=1 --lr=5e-6 --epoch=10 --use-crf=False --augment-type=all  --augment-rate=0.15 
---alpha-sub=0.4 --alpha-del=0.4 --data-path=data --save-path=out
+--language=english --seed=1 --lr=5e-6 --epoch=10 --augment-type=all  --augment-rate=0.15 
+--alpha-sub=0.4 --alpha-del=0.4 --data-path=data --save-path=out --sliding-window=True
 ```
 
 #### Supported models for English
@@ -60,17 +67,6 @@ albert-base-v2
 albert-large-v2
 ```
 
-#### Supported models for Bangla
-```
-bert-base-multilingual-cased
-bert-base-multilingual-uncased
-xlm-mlm-100-1280
-distilbert-base-multilingual-cased
-xlm-roberta-base
-xlm-roberta-large
-```
-
-
 ## Pretrained Models
 You can find pretrained mdoels for RoBERTa-large model with augmentation for English [here](https://drive.google.com/file/d/17BPcnHVhpQlsOTC8LEayIFFJ7WkL00cr/view?usp=sharing)  
 XLM-RoBERTa-large model with augmentation for Bangla can be found [here](https://drive.google.com/file/d/1X2udyT1XYrmCNvWtFpT_6jrWsQejGCBW/view?usp=sharing)
@@ -89,16 +85,6 @@ python inference.py --pretrained-model=roberta-large --weight-path=roberta-large
 This should create the text file with following output:
 ```text
 Tolkien drew on a wide array of influences including language, Christianity, mythology, including the Norse Völsunga saga, archaeology, especially at the Temple of Nodens, ancient and modern literature and personal experience. He was inspired primarily by his profession, philology. his work centred on the study of Old English literature, especially Beowulf, and he acknowledged its importance to his writings. 
-```
-
-Similarly, For Bangla
-```bash
-python inference.py --pretrained-model=xlm-roberta-large --weight-path=xlm-roberta-large-bn.pt --language=bn  
---in-file=data/test_bn.txt --out-file=data/test_bn_out.txt
-```
-The expected output is
-```text
-বিংশ শতাব্দীর বাংলা মননে কাজী নজরুল ইসলামের মর্যাদা ও গুরুত্ব অপরিসীম। একাধারে কবি, সাহিত্যিক, সংগীতজ্ঞ, সাংবাদিক, সম্পাদক, রাজনীতিবিদ এবং সৈনিক হিসেবে অন্যায় ও অবিচারের বিরুদ্ধে নজরুল সর্বদাই ছিলেন সোচ্চার। তার কবিতা ও গানে এই মনোভাবই প্রতিফলিত হয়েছে। অগ্নিবীণা হাতে তার প্রবেশ, ধূমকেতুর মতো তার প্রকাশ। যেমন লেখাতে বিদ্রোহী, তেমনই জীবনে কাজেই "বিদ্রোহী কবি"। তার জন্ম ও মৃত্যুবার্ষিকী বিশেষ মর্যাদার সঙ্গে উভয় বাংলাতে প্রতি বৎসর উদযাপিত হয়ে থাকে। 
 ```
 
 Please note that *Comma* includes commas, colons and dashes, *Period* includes full stops, exclamation marks 
