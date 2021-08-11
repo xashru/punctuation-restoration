@@ -1,0 +1,21 @@
+Namespace(alpha_del=0.4, alpha_sub=0.4, augment_rate=0.15, augment_type='all', batch_size=8, cuda=True, data_path='data', decay=0, epoch=10, freeze_bert=False, gradient_clip=-1, language='utt_with_LJ_speech', lr=5e-06, lstm_dim=-1, name='punctuation-restore', pretrained_model='xlm-roberta-base', save_path='out/fullUtt_20%LJSpeech_slidingWindow_seed1\r', seed=1, sequence_length=256, sliding_window=True, stride_size=0.5, sub_style='unk', trained_model_path=False)
+epoch: 0, Train loss: 0.3607586944652511, Train accuracy: 0.8489864066963809
+epoch: 0, Val loss: 0.1831877861400844, Val accuracy: 0.9155218855218855
+epoch: 1, Train loss: 0.23569289141145383, Train accuracy: 0.8939204214071894
+epoch: 1, Val loss: 0.153428578552613, Val accuracy: 0.9275420875420876
+epoch: 2, Train loss: 0.2191256311355826, Train accuracy: 0.9007353188257748
+epoch: 2, Val loss: 0.1364948958002047, Val accuracy: 0.9389225589225589
+epoch: 3, Train loss: 0.21020718587095544, Train accuracy: 0.9041965355272948
+epoch: 3, Val loss: 0.1229390654786777, Val accuracy: 0.9443771043771044
+epoch: 4, Train loss: 0.20477364288553052, Train accuracy: 0.9064026677256882
+epoch: 4, Val loss: 0.11574958364027743, Val accuracy: 0.9481818181818182
+epoch: 5, Train loss: 0.20059276956896258, Train accuracy: 0.9081101381137255
+epoch: 5, Val loss: 0.11857773328996919, Val accuracy: 0.9489898989898989
+epoch: 6, Train loss: 0.1969764489028378, Train accuracy: 0.9097547849226779
+epoch: 6, Val loss: 0.11954603514524913, Val accuracy: 0.9501346801346802
+epoch: 7, Train loss: 0.19406769449658617, Train accuracy: 0.9109810553581995
+epoch: 7, Val loss: 0.11140138917002654, Val accuracy: 0.9532996632996633
+epoch: 8, Train loss: 0.1914772588346332, Train accuracy: 0.9119866870124868
+epoch: 8, Val loss: 0.11368857578935296, Val accuracy: 0.9537037037037037
+epoch: 9, Train loss: 0.18939818442923603, Train accuracy: 0.9128350113033571
+epoch: 9, Val loss: 0.1160602333187009, Val accuracy: 0.9546801346801347

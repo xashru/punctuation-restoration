@@ -1,0 +1,31 @@
+Namespace(alpha_del=0.4, alpha_sub=0.4, augment_rate=0.15, augment_type='all', batch_size=8, cuda=True, data_path='data', decay=0, epoch=10, freeze_bert=False, gradient_clip=-1, language='utt_with_ted_talk_no_asr', lr=5e-06, lstm_dim=-1, name='punctuation-restore', pretrained_model='bert-base-uncased', save_path='out/fullUtt_tedTalkOriginal_removeTokens_seed1', seed=1, sequence_length=256, sliding_window=False, stride_size=0.5, sub_style='unk', trained_model_path=False)
+epoch: 0, Train loss: 0.43828895959589215, Train accuracy: 0.8318610477475885
+epoch: 0, Val loss: 0.2705633730627596, Val accuracy: 0.8802129817444219
+epoch: 1, Train loss: 0.28214142481486004, Train accuracy: 0.8805408007952039
+epoch: 1, Val loss: 0.23527970509603618, Val accuracy: 0.8965449628127113
+epoch: 2, Train loss: 0.26244640122961116, Train accuracy: 0.8877707815739905
+epoch: 2, Val loss: 0.21836788272485136, Val accuracy: 0.9031710615280595
+epoch: 3, Train loss: 0.2499487316829187, Train accuracy: 0.8922147114964132
+epoch: 3, Val loss: 0.2177564963698387, Val accuracy: 0.9035125084516565
+epoch: 4, Train loss: 0.24259176428671236, Train accuracy: 0.8951116877470424
+epoch: 4, Val loss: 0.20277282325550913, Val accuracy: 0.9112812711291413
+epoch: 5, Train loss: 0.23639933504440167, Train accuracy: 0.897587430623966
+epoch: 5, Val loss: 0.20128258410841227, Val accuracy: 0.9125760649087221
+epoch: 6, Train loss: 0.23248093666853728, Train accuracy: 0.8992115039028142
+epoch: 6, Val loss: 0.19512373441830277, Val accuracy: 0.9158316430020284
+epoch: 7, Train loss: 0.22908892589586752, Train accuracy: 0.9006440726509809
+epoch: 7, Val loss: 0.19041668493300676, Val accuracy: 0.9189824205544287
+epoch: 8, Train loss: 0.2261285236808989, Train accuracy: 0.9020876453875867
+epoch: 8, Val loss: 0.18743510246276857, Val accuracy: 0.9200507099391481
+epoch: 9, Train loss: 0.22372896194458008, Train accuracy: 0.9030893669703098
+epoch: 9, Val loss: 0.18662500297650694, Val accuracy: 0.9216362407031778
+Precision: [0.95364833 0.66170118 0.68144837 0.74350649 0.67476586]
+Recall: [0.98729648 0.3957062  0.71755685 0.30191167 0.53432996]
+F1 score: [0.97018074 0.49524765 0.69903663 0.4294421  0.59639213]
+Accuracy:0.9216362407031778
+Confusion Matrix[[249709   1869   1295     49]
+ [  8943   8884   4550     74]
+ [  2923   2383  13569     35]
+ [   271    290    498    458]]
+66.17011768210934 39.57062046234021 49.524765169885995 68.14483728404981 71.75568482284505 69.90366287156766 74.35064935064936 30.19116677653263 42.94421003281763 67.47658596925253 53.4329959419749 59.639212827988345
+

@@ -1,0 +1,21 @@
+Namespace(alpha_del=0.4, alpha_sub=0.4, augment_rate=0.15, augment_type='all', batch_size=8, cuda=True, data_path='data', decay=0, epoch=10, freeze_bert=False, gradient_clip=-1, language='utt_with_ted_talk_no_asr', lr=5e-06, lstm_dim=-1, name='punctuation-restore', pretrained_model='bert-base-multilingual-uncased', save_path='out/fullUtt_tedTalkOriginal_slidingWindow_seed1\r', seed=1, sequence_length=256, sliding_window=True, stride_size=0.5, sub_style='unk', trained_model_path=False)
+epoch: 0, Train loss: 0.34987796310298147, Train accuracy: 0.8596046157882289
+epoch: 0, Val loss: 0.2878709773655451, Val accuracy: 0.8979121507147181
+epoch: 1, Train loss: 0.2473995530512149, Train accuracy: 0.8915979820441388
+epoch: 1, Val loss: 0.2612632751838147, Val accuracy: 0.910640794559553
+epoch: 2, Train loss: 0.2326165373787316, Train accuracy: 0.8971632076736079
+epoch: 2, Val loss: 0.24930376249088565, Val accuracy: 0.9148729671875582
+epoch: 3, Train loss: 0.22398412342154983, Train accuracy: 0.9005966998405929
+epoch: 3, Val loss: 0.24428956400516003, Val accuracy: 0.9196478994694144
+epoch: 4, Train loss: 0.2189221873854745, Train accuracy: 0.902503812266663
+epoch: 4, Val loss: 0.24095695648610643, Val accuracy: 0.9222670106962542
+epoch: 5, Train loss: 0.21451255879400524, Train accuracy: 0.9042527256312713
+epoch: 5, Val loss: 0.235729397719624, Val accuracy: 0.9234505987264593
+epoch: 6, Train loss: 0.21117424590752082, Train accuracy: 0.9056923922766295
+epoch: 6, Val loss: 0.2486327764207737, Val accuracy: 0.9237228239734064
+epoch: 7, Train loss: 0.20823057291330388, Train accuracy: 0.9066336134156907
+epoch: 7, Val loss: 0.24383158469256608, Val accuracy: 0.9242605111071283
+epoch: 8, Train loss: 0.20472365040354998, Train accuracy: 0.9080998494541421
+epoch: 8, Val loss: 0.25708200471617243, Val accuracy: 0.9242080950657906
+epoch: 9, Train loss: 0.20230639897464348, Train accuracy: 0.9092213270174858
+epoch: 9, Val loss: 0.24277058017213574, Val accuracy: 0.9250670418077109

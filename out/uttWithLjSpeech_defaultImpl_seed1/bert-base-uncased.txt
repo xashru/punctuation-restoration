@@ -1,0 +1,31 @@
+Namespace(alpha_del=0.4, alpha_sub=0.4, augment_rate=0.15, augment_type='all', batch_size=8, cuda=True, data_path='data', decay=0, epoch=10, freeze_bert=False, gradient_clip=-1, language='utt_with_LJ_speech', lr=5e-06, lstm_dim=-1, name='punctuation-restore', pretrained_model='bert-base-uncased', save_path='out/fullUtt_20%LJSpeech_defaultImpl_seed1', seed=1, sequence_length=256, sliding_window=False, stride_size=0.5, sub_style='unk', trained_model_path=False)
+epoch: 0, Train loss: 0.4265265487360232, Train accuracy: 0.8330034685778831
+epoch: 0, Val loss: 0.22469421724478403, Val accuracy: 0.9049684054020567
+epoch: 1, Train loss: 0.2717651244666841, Train accuracy: 0.8816936239139057
+epoch: 1, Val loss: 0.19539186027314928, Val accuracy: 0.9140131334407137
+epoch: 2, Train loss: 0.2515949732039398, Train accuracy: 0.8894174980659962
+epoch: 2, Val loss: 0.18220270176728567, Val accuracy: 0.9182876966918597
+epoch: 3, Train loss: 0.2394473540447491, Train accuracy: 0.8941643923917488
+epoch: 3, Val loss: 0.17065559658739302, Val accuracy: 0.9228720109032338
+epoch: 4, Train loss: 0.23212259896045812, Train accuracy: 0.8966893550955679
+epoch: 4, Val loss: 0.16106750402185652, Val accuracy: 0.9292528806839301
+epoch: 5, Train loss: 0.22714599825087048, Train accuracy: 0.8985215025766432
+epoch: 5, Val loss: 0.15585223005877602, Val accuracy: 0.93080163548507
+epoch: 6, Train loss: 0.22306817914070334, Train accuracy: 0.9006220905875171
+epoch: 6, Val loss: 0.1488442685869005, Val accuracy: 0.9337752447032586
+epoch: 7, Train loss: 0.219576991890244, Train accuracy: 0.9019682178887692
+epoch: 7, Val loss: 0.1452396454082595, Val accuracy: 0.9373064056498576
+epoch: 8, Train loss: 0.216194674587697, Train accuracy: 0.9036885399560585
+epoch: 8, Val loss: 0.13826879113912582, Val accuracy: 0.9413331681328212
+epoch: 9, Train loss: 0.21383223285922756, Train accuracy: 0.9044638708420283
+epoch: 9, Val loss: 0.13507362786266539, Val accuracy: 0.9426960723578243
+Precision: [0.97117364 0.67584481 0.68175938        nan 0.67875318]
+Recall: [0.98120796 0.51282051 0.7936747  0.         0.61998838]
+F1 score: [0.97616502 0.58315335 0.73347251        nan 0.6480413 ]
+Accuracy:0.9426960723578243
+Confusion Matrix[[14150   184    87     0]
+ [  355   540   158     0]
+ [   62    75   527     0]
+ [    3     0     1     0]]
+67.58448060075094 51.28205128205128 58.315334773218154 68.17593790426908 79.36746987951807 73.34725121781489 nan 0.0 nan 67.87531806615776 61.99883788495061 64.80412997266929
+
