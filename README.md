@@ -79,8 +79,7 @@ text already contains punctuation they are removed before inference.
 
 Example script for English:
 ```bash
-python inference.py --pretrained-model=roberta-large --weight-path=roberta-large-en.pt --language=en 
---in-file=data/test_en.txt --out-file=data/test_en_out.txt
+python inference.py --pretrained-model=roberta-large --weight-path=roberta-large-en.pt --language=en --in-file=data/test_en.txt --out-file=data/test_en_out.txt
 ```
 This should create the text file with following output:
 ```text
@@ -89,8 +88,7 @@ Tolkien drew on a wide array of influences including language, Christianity, myt
 
 Similarly, For Bangla
 ```bash
-python inference.py --pretrained-model=xlm-roberta-large --weight-path=xlm-roberta-large-bn.pt --language=bn  
---in-file=data/test_bn.txt --out-file=data/test_bn_out.txt
+python inference.py --pretrained-model=xlm-roberta-large --weight-path=xlm-roberta-large-bn.pt --language=bn --in-file=data/test_bn.txt --out-file=data/test_bn_out.txt
 ```
 The expected output is
 ```text
@@ -106,8 +104,7 @@ Trained models can be tested on processed data using `test` module to prepare re
 
 For example, to test the best preforming English model run following command
 ```bash
-python src/test.py --pretrained-model=roberta-large --lstm-dim=-1 --use-crf=False --data-path=data/test
---weight-path=weights/roberta-large-en.pt --sequence-length=256 --save-path=out
+python src/test.py --pretrained-model=roberta-large --lstm-dim=-1 --use-crf=False --data-path=data/test --weight-path=weights/roberta-large-en.pt --sequence-length=256 --save-path=out
 ```
 Please provide corresponding arguments for `pretrained-model`, `lstm-dim`, `use-crf` that were used during training the
 model. This will run test for all data available in `data-path` directory.
