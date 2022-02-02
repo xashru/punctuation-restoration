@@ -30,15 +30,11 @@ pip install -r requirements.txt
 ## Training
 To train punctuation restoration model with optimal parameter settings for English run the following command
 ```
-python src/train.py --cuda=True --pretrained-model=roberta-large --freeze-bert=False --lstm-dim=-1 
---language=english --seed=1 --lr=5e-6 --epoch=10 --use-crf=False --augment-type=all  --augment-rate=0.15 
---alpha-sub=0.4 --alpha-del=0.4 --data-path=data --save-path=out
+python src/train.py --cuda=True --pretrained-model=roberta-large --freeze-bert=False --lstm-dim=-1 --language=english --seed=1 --lr=5e-6 --epoch=10 --use-crf=False --augment-type=all  --augment-rate=0.15 --alpha-sub=0.4 --alpha-del=0.4 --data-path=data --save-path=out
 ```
 To train for Bangla the corresponding command is
 ```
-python src/train.py --cuda=True --pretrained-model=xlm-roberta-large --freeze-bert=False --lstm-dim=-1 
---language=bangla --seed=1 --lr=5e-6 --epoch=10 --use-crf=False --augment-type=all  --augment-rate=0.15 
---alpha-sub=0.4 --alpha-del=0.4 --data-path=data --save-path=out
+python src/train.py --cuda=True --pretrained-model=xlm-roberta-large --freeze-bert=False --lstm-dim=-1 --language=bangla --seed=1 --lr=5e-6 --epoch=10 --use-crf=False --augment-type=all  --augment-rate=0.15 --alpha-sub=0.4 --alpha-del=0.4 --data-path=data --save-path=out
 ```
 
 #### Supported models for English
@@ -83,8 +79,7 @@ text already contains punctuation they are removed before inference.
 
 Example script for English:
 ```bash
-python inference.py --pretrained-model=roberta-large --weight-path=roberta-large-en.pt --language=en 
---in-file=data/test_en.txt --out-file=data/test_en_out.txt
+python inference.py --pretrained-model=roberta-large --weight-path=roberta-large-en.pt --language=en --in-file=data/test_en.txt --out-file=data/test_en_out.txt
 ```
 This should create the text file with following output:
 ```text
@@ -93,8 +88,7 @@ Tolkien drew on a wide array of influences including language, Christianity, myt
 
 Similarly, For Bangla
 ```bash
-python inference.py --pretrained-model=xlm-roberta-large --weight-path=xlm-roberta-large-bn.pt --language=bn  
---in-file=data/test_bn.txt --out-file=data/test_bn_out.txt
+python inference.py --pretrained-model=xlm-roberta-large --weight-path=xlm-roberta-large-bn.pt --language=bn --in-file=data/test_bn.txt --out-file=data/test_bn_out.txt
 ```
 The expected output is
 ```text
@@ -110,11 +104,20 @@ Trained models can be tested on processed data using `test` module to prepare re
 
 For example, to test the best preforming English model run following command
 ```bash
-python src/test.py --pretrained-model=roberta-large --lstm-dim=-1 --use-crf=False --data-path=data/test
---weight-path=weights/roberta-large-en.pt --sequence-length=256 --save-path=out
+python src/test.py --pretrained-model=roberta-large --lstm-dim=-1 --use-crf=False --data-path=data/test --weight-path=weights/roberta-large-en.pt --sequence-length=256 --save-path=out
 ```
 Please provide corresponding arguments for `pretrained-model`, `lstm-dim`, `use-crf` that were used during training the
 model. This will run test for all data available in `data-path` directory.
+
+
+## Inference Test for Bengali text
+python src/inference.py --pretrained-model=xlm-roberta-base --weight-path=out/weights.pt --language=bn --inputCMD="শুরুতেই আমার পক্ষ থেকে এক রাশ রজনী গন্ধা ফুলের শুভেচ্ছা নিও আশা করি ভালোই আছ আর আমি চাই তুমি সব সময় ভালো থাকো যাক সে কথা যে কারনে আজ তোমার কাছে আমার এই চিঠি লেখা শুনেছি আগামী ১৫ তারিখ তোমার শুভবিবাহ সম্পর্ন হতে যাচ্ছে তুমিও নাকি এই বিয়েতে রাজি হয়ে গেছ ভালো খুব ভালো।শুনে আমি খুব খুশি হয়েছি কারন আমি ভাবতেও পারিনি এত সহজে তুমি আমাকে ভুলে গিয়ে নতুন করে আরেকটি প্রেম করার সুযোগ দিবে তুমিই ভাবো এ যাবত কত টাকা নিয়েছি তোমার কাছে তার কোন হিসাব নেই কিন্তু গত দুই মাস থেকে তুমি আমাকে কোন টাকা না দেওয়ায় আমি ভাবছিলাম তোমার সাথে রিলেসনটা নষ্ট করবো কিন্তু এখন তো দেখছি তুমিই আমাকে ভুলে যাবে মনে হচ্ছে মেঘ না চাইতেই বৃষ্টি যাক সে কথা যেটা বলতে চাচ্ছি বিয়ের পরে স্বামীর বাড়িতে গিয়ে স্বামীর পাকেট থেকে টাকা চুরি করে আমাকে দিও কেমন"
+
+## Base Roberta Model
+python src/inference.py --pretrained-model=xlm-roberta-base --weight-path=out/weights.pt --language=bn --in-file=data/test_bn.txt --out-file=data/test_bn_out.txt
+
+
+
 
 
 ## Cite this work

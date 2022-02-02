@@ -13,11 +13,13 @@ parser.add_argument('--lstm-dim', default=-1, type=int,
 parser.add_argument('--use-crf', default=False, type=lambda x: (str(x).lower() == 'true'),
                     help='whether to use CRF layer or not')
 parser.add_argument('--language', default='en', type=str, help='language English (en) oe Bangla (bn)')
-parser.add_argument('--in-file', default='data/test_en.txt', type=str, help='path to inference file')
+# parser.add_argument('--in-file', default='data/test_en.txt', type=str, help='path to inference file')
+parser.add_argument('--inputCMD', default="data/amarinput.txt", type=str, help='your input text')
 parser.add_argument('--weight-path', default='xlm-roberta-large.pt', type=str, help='model weight path')
 parser.add_argument('--sequence-length', default=256, type=int,
                     help='sequence length to use when preparing dataset (default 256)')
-parser.add_argument('--out-file', default='data/test_en_out.txt', type=str, help='output file location')
+# parser.add_argument('--out-file', default='data/test_en_out.txt', type=str, help='output file location')
+parser.add_argument('--outputCMD', default="data/amaroutput.txt", type=str, help='your output text')
 
 args = parser.parse_args()
 
@@ -41,9 +43,10 @@ def inference():
     deep_punctuation.load_state_dict(torch.load(model_save_path))
     deep_punctuation.eval()
 
-    with open(args.in_file, 'r', encoding='utf-8') as f:
-        text = f.read()
-    text = re.sub(r"[,:\-–.!;?]", '', text)
+    # with open(args.in_file, 'r', encoding='utf-8') as f:
+    #     text = f.read()
+    text = args.inputCMD
+    # text = re.sub(r"[,:\-–.!;?]", '', text)
     words_original_case = text.split()
     words = text.lower().split()
 
@@ -97,8 +100,9 @@ def inference():
                 decode_idx += 1
     print('Punctuated text')
     print(result)
-    with open(args.out_file, 'w', encoding='utf-8') as f:
-        f.write(result)
+    # with open(args.out_file, 'w', encoding='utf-8') as f:
+    #     f.write(result)
+    print(args.outputCMD)
 
 
 if __name__ == '__main__':
