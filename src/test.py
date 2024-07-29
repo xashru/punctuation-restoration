@@ -11,13 +11,13 @@ from config import *
 
 parser = argparse.ArgumentParser(description='Punctuation restoration test')
 parser.add_argument('--cuda', default=True, type=lambda x: (str(x).lower() == 'true'), help='use cuda if available')
-parser.add_argument('--pretrained-model', default='roberta-large', type=str, help='pretrained language model')
+parser.add_argument('--pretrained-model', default='HooshvareLab/bert-base-parsbert-uncased', type=str, help='pretrained language model')
 parser.add_argument('--lstm-dim', default=-1, type=int,
                     help='hidden dimension in LSTM layer, if -1 is set equal to hidden dimension in language model')
 parser.add_argument('--use-crf', default=False, type=lambda x: (str(x).lower() == 'true'),
                     help='whether to use CRF layer or not')
 parser.add_argument('--data-path', default='data/test', type=str, help='path to test datasets')
-parser.add_argument('--weight-path', default='out/weights.pt', type=str, help='model weight path')
+parser.add_argument('--weight-path', default='out/5_weights.pt', type=str, help='model weight path')
 parser.add_argument('--sequence-length', default=256, type=int,
                     help='sequence length to use when preparing dataset (default 256)')
 parser.add_argument('--batch-size', default=8, type=int, help='batch size (default: 8)')
@@ -65,10 +65,10 @@ def test(data_loader):
     num_iteration = 0
     deep_punctuation.eval()
     # +1 for overall result
-    tp = np.zeros(1+len(punctuation_dict), dtype=np.int)
-    fp = np.zeros(1+len(punctuation_dict), dtype=np.int)
-    fn = np.zeros(1+len(punctuation_dict), dtype=np.int)
-    cm = np.zeros((len(punctuation_dict), len(punctuation_dict)), dtype=np.int)
+    tp = np.zeros(1+len(punctuation_dict), dtype=np.int64)
+    fp = np.zeros(1+len(punctuation_dict), dtype=np.int64)
+    fn = np.zeros(1+len(punctuation_dict), dtype=np.int64)
+    cm = np.zeros((len(punctuation_dict), len(punctuation_dict)), dtype=np.int64)
     correct = 0
     total = 0
     with torch.no_grad():
@@ -93,6 +93,8 @@ def test(data_loader):
                     # we can ignore this because we know there won't be any punctuation in this position
                     # since we created this position due to padding or sub-word tokenization
                     continue
+                print('i: ', i)
+                print('y[i]: ', y[i])
                 cor = y[i]
                 prd = y_predict[i]
                 if cor == prd:

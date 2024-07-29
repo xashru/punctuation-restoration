@@ -29,7 +29,8 @@ TOKEN_IDX = {
 }
 
 # 'O' -> No punctuation
-punctuation_dict = {'O': 0, 'COMMA': 1, 'PERIOD': 2, 'QUESTION': 3}
+punctuation_dict = {'O': 0, 'COMMA': 1, 'PERIOD': 2, 'QUESTION': 3, 'EXCLAMATION':4, 'COLON':5}
+
 
 
 # pretrained model name: (model class, model tokenizer, output dimension, token style)
@@ -49,4 +50,5 @@ MODELS = {
     'albert-base-v1': (AlbertModel, AlbertTokenizer, 768, 'albert'),
     'albert-base-v2': (AlbertModel, AlbertTokenizer, 768, 'albert'),
     'albert-large-v2': (AlbertModel, AlbertTokenizer, 1024, 'albert'),
+    'HooshvareLab/bert-base-parsbert-uncased': (BertModel, BertTokenizer, 768, 'bert')
 }

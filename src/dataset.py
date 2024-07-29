@@ -2,6 +2,7 @@ import torch
 from config import *
 from augmentation import *
 import numpy as np
+from tqdm import tqdm
 
 
 def parse_data(file_path, tokenizer, sequence_len, token_style):
@@ -19,41 +20,44 @@ def parse_data(file_path, tokenizer, sequence_len, token_style):
         lines = [line for line in f.read().split('\n') if line.strip()]
         idx = 0
         # loop until end of the entire text
-        while idx < len(lines):
-            x = [TOKEN_IDX[token_style]['START_SEQ']]
-            y = [0]
-            y_mask = [1]  # which positions we need to consider while evaluating i.e., ignore pad or sub tokens
+        with tqdm(total=len(lines), desc="Parsing data", unit="line") as pbar:
+            while idx < len(lines):
+                x = [TOKEN_IDX[token_style]['START_SEQ']]
+                y = [0]
+                y_mask = [1]  # which positions we need to consider while evaluating i.e., ignore pad or sub tokens
 
-            # loop until we have required sequence length
-            # -1 because we will have a special end of sequence token at the end
-            while len(x) < sequence_len - 1 and idx < len(lines):
-                word, punc = lines[idx].split('\t')
-                tokens = tokenizer.tokenize(word)
-                # if taking these tokens exceeds sequence length we finish current sequence with padding
-                # then start next sequence from this token
-                if len(tokens) + len(x) >= sequence_len:
-                    break
-                else:
-                    for i in range(len(tokens) - 1):
-                        x.append(tokenizer.convert_tokens_to_ids(tokens[i]))
-                        y.append(0)
-                        y_mask.append(0)
-                    if len(tokens) > 0:
-                        x.append(tokenizer.convert_tokens_to_ids(tokens[-1]))
+                # loop until we have required sequence length
+                # -1 because we will have a special end of sequence token at the end
+                while len(x) < sequence_len - 1 and idx < len(lines):
+                    word, punc = lines[idx].split('\t')
+                    tokens = tokenizer.tokenize(word)
+                    # if taking these tokens exceeds sequence length we finish current sequence with padding
+                    # then start next sequence from this token
+                    if len(tokens) + len(x) >= sequence_len:
+                        break
                     else:
-                        x.append(TOKEN_IDX[token_style]['UNK'])
-                    y.append(punctuation_dict[punc])
-                    y_mask.append(1)
-                    idx += 1
-            x.append(TOKEN_IDX[token_style]['END_SEQ'])
-            y.append(0)
-            y_mask.append(1)
-            if len(x) < sequence_len:
-                x = x + [TOKEN_IDX[token_style]['PAD'] for _ in range(sequence_len - len(x))]
-                y = y + [0 for _ in range(sequence_len - len(y))]
-                y_mask = y_mask + [0 for _ in range(sequence_len - len(y_mask))]
-            attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x]
-            data_items.append([x, y, attn_mask, y_mask])
+                        for i in range(len(tokens) - 1):
+                            x.append(tokenizer.convert_tokens_to_ids(tokens[i]))
+                            y.append(0)
+                            y_mask.append(0)
+                        if len(tokens) > 0:
+                            x.append(tokenizer.convert_tokens_to_ids(tokens[-1]))
+                        else:
+                            x.append(TOKEN_IDX[token_style]['UNK'])
+                        y.append(punctuation_dict[punc])
+                        y_mask.append(1)
+                        idx += 1
+                        pbar.update(1)  # Update progress bar for each line processed
+                x.append(TOKEN_IDX[token_style]['END_SEQ'])
+                y.append(0)
+                y_mask.append(1)
+                if len(x) < sequence_len:
+                    x = x + [TOKEN_IDX[token_style]['PAD'] for _ in range(sequence_len - len(x))]
+                    y = y + [0 for _ in range(sequence_len - len(y))]
+                    y_mask = y_mask + [0 for _ in range(sequence_len - len(y_mask))]
+                attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x]
+                data_items.append([x, y, attn_mask, y_mask])
+                pbar.update(1)  # Ensure pbar update in outer loop too
     return data_items
 
 
@@ -69,11 +73,16 @@ class Dataset(torch.utils.data.Dataset):
         :param augment_rate: token augmentation rate when preparing data
         :param is_train: if false do not apply augmentation
         """
+        print('*')
         if isinstance(files, list):
+            print('***')
             self.data = []
-            for file in files:
+            # for file in files:
+            for file in tqdm(files, desc="Loading files"):
+                print('**')
                 self.data += parse_data(file, tokenizer, sequence_len, token_style)
         else:
+            print('---')
             self.data = parse_data(files, tokenizer, sequence_len, token_style)
         self.sequence_len = sequence_len
         self.augment_rate = augment_rate

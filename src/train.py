@@ -13,7 +13,7 @@ from config import *
 import augmentation
 
 torch.multiprocessing.set_sharing_strategy('file_system')   # https://github.com/pytorch/pytorch/issues/11201
-
+print(1)
 args = parse_arguments()
 
 # for reproducibility
@@ -22,6 +22,7 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 np.random.seed(args.seed)
 
+print(2)
 # tokenizer
 tokenizer = MODELS[args.pretrained_model][1].from_pretrained(args.pretrained_model)
 augmentation.tokenizer = tokenizer
@@ -34,16 +35,27 @@ sequence_len = args.sequence_length
 aug_type = args.augment_type
 
 # Datasets
-if args.language == 'english':
-    train_set = Dataset(os.path.join(args.data_path, 'en/train2012'), tokenizer=tokenizer, sequence_len=sequence_len,
+if args.language == 'persian':
+    train_set = Dataset(os.path.join(args.data_path, 'tsv_train.txt'), tokenizer=tokenizer, sequence_len=sequence_len,
                         token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type)
-    val_set = Dataset(os.path.join(args.data_path, 'en/dev2012'), tokenizer=tokenizer, sequence_len=sequence_len,
+    val_set = Dataset(os.path.join(args.data_path, 'tsv_dev.txt'), tokenizer=tokenizer, sequence_len=sequence_len,
                       token_style=token_style, is_train=False)
-    test_set_ref = Dataset(os.path.join(args.data_path, 'en/test2011'), tokenizer=tokenizer, sequence_len=sequence_len,
+    test_set_ref = Dataset(os.path.join(args.data_path, 'tsv_test.txt'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
-    test_set_asr = Dataset(os.path.join(args.data_path, 'en/test2011asr'), tokenizer=tokenizer, sequence_len=sequence_len,
+
+    test_set = [val_set, test_set_ref]
+
+elif args.language == 'english':
+    train_set = Dataset(os.path.join(args.data_path, 'tsv_train.txt'), tokenizer=tokenizer, sequence_len=sequence_len,
+                        token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type)
+    val_set = Dataset(os.path.join(args.data_path, 'tsv_dev.txt'), tokenizer=tokenizer, sequence_len=sequence_len,
+                      token_style=token_style, is_train=False)
+    test_set_ref = Dataset(os.path.join(args.data_path, 'tsv_test.txt'), tokenizer=tokenizer, sequence_len=sequence_len,
+                           token_style=token_style, is_train=False)
+    test_set_asr = Dataset(os.path.join(args.data_path, 'tsv_dev3.txt'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
     test_set = [val_set, test_set_ref, test_set_asr]
+
 elif args.language == 'bangla':
     train_set = Dataset(os.path.join(args.data_path, 'bn/train'), tokenizer=tokenizer, sequence_len=sequence_len,
                         token_style=token_style, is_train=True, augment_rate=ar, augment_type=aug_type)
@@ -56,6 +68,7 @@ elif args.language == 'bangla':
     test_set_asr = Dataset(os.path.join(args.data_path, 'bn/test_asr'), tokenizer=tokenizer, sequence_len=sequence_len,
                            token_style=token_style, is_train=False)
     test_set = [val_set, test_set_news, test_set_ref, test_set_asr]
+
 elif args.language == 'english-bangla':
     train_set = Dataset([os.path.join(args.data_path, 'en/train2012'), os.path.join(args.data_path, 'bn/train_bn')],
                         tokenizer=tokenizer, sequence_len=sequence_len, token_style=token_style, is_train=True,
@@ -78,19 +91,19 @@ else:
 
 # Data Loaders
 data_loader_params = {
-    'batch_size': args.batch_size,
+    'batch_size': 8, #
     'shuffle': True,
     'num_workers': 1
 }
 train_loader = torch.utils.data.DataLoader(train_set, **data_loader_params)
 val_loader = torch.utils.data.DataLoader(val_set, **data_loader_params)
 test_loaders = [torch.utils.data.DataLoader(x, **data_loader_params) for x in test_set]
+print('Data Loaded')
 
 # logs
 os.makedirs(args.save_path, exist_ok=True)
 model_save_path = os.path.join(args.save_path, 'weights.pt')
 log_path = os.path.join(args.save_path, args.name + '_logs.txt')
-
 
 # Model
 device = torch.device('cuda' if (args.cuda and torch.cuda.is_available()) else 'cpu')
@@ -99,9 +112,13 @@ if args.use_crf:
 else:
     deep_punctuation = DeepPunctuation(args.pretrained_model, freeze_bert=args.freeze_bert, lstm_dim=args.lstm_dim)
 deep_punctuation.to(device)
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(deep_punctuation.parameters(), lr=args.lr, weight_decay=args.decay)
 
+weights = torch.tensor([0.2, 1.0, 1.5, 1.0, 1.0, 1.0], dtype=torch.float32)
+criterion = nn.CrossEntropyLoss(weight=weights) # ignore_index=0
+
+optimizer = torch.optim.Adam(deep_punctuation.parameters(), lr=args.lr, weight_decay=args.decay)
+print(device)
+print('Crt and Opt loaded!')
 
 def validate(data_loader):
     """
@@ -142,10 +159,10 @@ def test(data_loader):
     num_iteration = 0
     deep_punctuation.eval()
     # +1 for overall result
-    tp = np.zeros(1+len(punctuation_dict), dtype=np.int)
-    fp = np.zeros(1+len(punctuation_dict), dtype=np.int)
-    fn = np.zeros(1+len(punctuation_dict), dtype=np.int)
-    cm = np.zeros((len(punctuation_dict), len(punctuation_dict)), dtype=np.int)
+    tp = np.zeros(1+len(punctuation_dict), dtype=np.int32)
+    fp = np.zeros(1+len(punctuation_dict), dtype=np.int32)
+    fn = np.zeros(1+len(punctuation_dict), dtype=np.int32)
+    cm = np.zeros((len(punctuation_dict), len(punctuation_dict)), dtype=np.int32)
     correct = 0
     total = 0
     with torch.no_grad():
@@ -190,6 +207,7 @@ def test(data_loader):
 
 
 def train():
+    print('Train Started!')
     with open(log_path, 'a') as f:
         f.write(str(args)+'\n')
     best_val_acc = 0
@@ -242,7 +260,9 @@ def train():
         print(log)
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            torch.save(deep_punctuation.state_dict(), model_save_path)
+            torch.save(deep_punctuation.state_dict(), os.path.join(args.save_path, (str(epoch) + '_weights.pt')))
+
+    torch.save(deep_punctuation.state_dict(), model_save_path)
 
     print('Best validation Acc:', best_val_acc)
     deep_punctuation.load_state_dict(torch.load(model_save_path))
